@@ -33,7 +33,7 @@ class DirectAccessError(Exception):
 
 
 class DuplicatePropertyError(Exception):
-    """ Raised by 'Node.addProperty()'."""
+    """ Raised by 'Node.add_property()'."""
     pass
 
 
@@ -128,7 +128,7 @@ class Node(Dictionary):
     An SGF node. Instance Attributes:
     - self[.data] : ordered dictionary -- '{Property.id:Property}' mapping.
       (Ordered dictionary: allows offset-indexed retrieval). Properties *must*
-      be added using 'self.addProperty()'.
+      be added using 'self.add_property()'.
 
     Example: Let 'n' be a 'Node' parsed from ';B[aa]BL[250]C[comment]':
     - 'str(n["BL"])'  =>  '"BL[250]"'
@@ -140,11 +140,11 @@ class Node(Dictionary):
             Initializer. Argument:
             - plist: Node or list of 'Property'."""
         if plist is None:
-            
+            plist = []
         Dictionary.__init__(self)
         self.order = []
         for p in plist:
-            self.addProperty(p)
+            self.add_property(p)
 
     def copy(self):
         plist = []
@@ -160,74 +160,148 @@ class Node(Dictionary):
         if type(key) is INT_TYPE:
             return self.order[key]
         else:
-            return self.data[key]
+            return List(self)[key]
 
     def __setitem__(self, key, x):
         """ On 'self[key]=x'. Allows assignment to existing items only. Raises
             'DirectAccessError' on new item assignment."""
-        if self.has_key(key):
+        if key in self.data:
             self.order[self.order.index(self[key])] = x
             Dictionary.__setitem__(self, key, x)
         else:
-            raise DirectAccessError(
-                "Properties may not be added directly; use addProperty() instead.")
+            raise DirectAccessError("Properties may not be added directly; use add_property() instead.")
 
     def __delitem__(self, key):
         """ On 'del self[key]'. Updates 'self.order' to maintain consistency."""
         self.order.remove(self[key])
         Dictionary.__delitem__(self, key)
 
-    def __getslice__(self, low, high):
-        """ On 'self[low:high]'."""
-        return self.order[low:high]
-
     def __str__(self):
         """ SGF representation, with proper line breaks between properties."""
         if len(self):
             s = ";" + str(self[0])
-            l = len(string.split(s, "\n")[-1])  # accounts for line breaks within Properties
+            l = len(s.split("\n")[-1])  # accounts for line breaks within Properties
             for p in map(str, self[1:]):
-                if l + len(string.split(p, "\n")[0]) > MAX_LINE_LEN:
+                if l + len(p.split("\n")[0]) > MAX_LINE_LEN:
                     s = s + "\n"
-                    l = 0
                 s = s + p
-                l = len(string.split(s, "\n")[-1])
+                l = len(s.split("\n")[-1])
             return s
         else:
             return ";"
 
-    def update(self, dict):
+    def update(self, n_dict):
         """ 'Dictionary' method not applicable to 'Node'. Raises
             'DirectAccessError'."""
-        raise DirectAccessError(
-            "The update() method is not supported by Node; use addProperty() instead.")
+        raise DirectAccessError("The update() method is not supported by Node; use add_property() instead.")
 
-    def addProperty(self, property):
+    def add_property(self, prop):
         """
             Adds a 'Property' to this 'Node'. Checks for duplicate properties
             (illegal), and maintains the property order. Argument:
-            - property : 'Property'"""
-        if self.has_key(property.id):
-            self.appendData(property.id, property[:])
+            - prop : 'Property'"""
+        if prop.id in self.data:
+            self.append_data(prop.id, prop[:])
         # raise DuplicatePropertyError
         else:
-            self.data[property.id] = property
-            self.order.append(property)
+            self.data[prop.id] = prop
+            self.order.append(prop)
 
-    def makeProperty(self, id, valuelist):
+    def make_property(self, id, value_list):
         """
             Create a new 'Property'. Override/extend to create 'Property'
             subclass instances (move, setup, game-info, etc.). Arguments:
             - id : string
-            - valuelist : 'Property' or list of values"""
-        return Property(id, valuelist)
+            - value_list : 'Property' or list of values"""
+        return Property(id, value_list)
 
-    def appendData(self, id, values):
-        newProp = Property(id, self.data[id][:] + values)
-        self.data[id] = newProp
-        for i in xrange(0, len(self.order)):
+    def append_data(self, id, values):
+        new_prop = Property(id, self.data[id][:] + values)
+        self.data[id] = new_prop
+        for i in range(0, len(self.order)):
             if self.order[i].id == id:
-                self.order[i] = newProp
+                self.order[i] = new_prop
+
+
+class GameTree(List):
+    """
+    An SGF game tree: a game or variation. Instance attributes:
+    - self[.data] : list of 'Node' -- game tree 'trunk'.
+    - self.variations : list of 'GameTree' -- 0 or 2+ variations.
+      'self.variations[0]' contains the main branch (sequence actually played)."""
+
+    def __init__(self, nodelist=None, variations=None):
+        """
+            Initialize the 'GameTree'. Arguments:
+            - nodelist : 'GameTree' or list of 'Node' -- Stored in 'self.data'.
+            - variations : list of 'GameTree' -- Stored in 'self.variations'."""
+        List.__init__(self, nodelist)
+        self.variations = variations or []
+
+    def __str__(self):
+        """ SGF representation, with proper line breaks between nodes."""
+        if len(self):
+            s = "(" + str(self[0])  # append the first Node automatically
+            l = len(s.split("\n")[-1])  # accounts for line breaks within Nodes
+            for n in [str(x) for x in self[1:]]:
+                if l + len(n.split("\n")[0]) > MAX_LINE_LEN:
+                    s = s + "\n"
+                    l = 0
+                s = s + n
+                l = len(s.split("\n")[-1])
+            return s + "\n".join([str(["" + x]) for x in self.variations]) + ")"
+        else:
+            return ""  # empty GameTree illegal; "()" illegal
+
+    def mainline(self):
+        """ Returns the main line of the game (variation A) as a 'GameTree'."""
+        if self.variations:
+            return GameTree(self.data + self.variations[0].mainline())
+        else:
+            return self
+
+    def cursor(self):
+        """ Returns a 'Cursor' object for navigation of this 'GameTree'."""
+        return Cursor(self)
+
+    def append_tree(self, n_tree, index):
+        if index + 1 < len(self.data):
+            subtree = GameTree(self.data[index + 1:], self.variations)
+            self.data = self.data[:index + 1]
+            self.variations = [subtree, n_tree]
+        else:
+            self.variations.append(n_tree)
+
+    def push_tree(self, ntree, index):
+        if index + 1 < len(self.data):
+            subtree = GameTree(self.data[index + 1:], self.variations)
+            self.data = self.data[:index + 1]
+            self.variations = [ntree, subtree]
+        else:
+            self.variations = [ntree] + self.variations
+
+    def append_node(self, node):
+        self.data.append(node)
+
+    def property_search(self, pid, get_all=0):
+        """
+            Searches this 'GameTree' for nodes containing matching properties.
+            Returns a 'GameTree' containing the matched node(s). Arguments:
+            - pid : string -- ID of properties to search for.
+            - getall : boolean -- Set to true (1) to return all 'Node''s that
+              match, or to false (0) to return only the first match."""
+        matches = []
+        for n in self:
+            if pid in n:
+                matches.append(n)
+                if not get_all:
+                    break
+        else:  # get_all or not matches:
+            for v in self.variations:
+                matches = matches + v.property_search(pid, get_all)
+                if not get_all and matches:
+                    break
+        return GameTree(matches)
 
 
 class SGFParser:
@@ -263,14 +337,12 @@ class SGFParser:
             one game, or 'None' if the end of 'self.data' has been reached."""
         if self.index < self.data_len:
             match = reGameTreeStart.match(self.data, self.index)
-            print(match)
             if match:
                 self.index = match.end()
                 return self.parse_game_tree()
         return None
 
     def parse_game_tree(self):
-
         """ Called when "(" encountered, ends when a matching ")" encountered.
             Parses and returns one 'GameTree' from 'self.data'. Raises
             'GameTreeParseError' if a problem is encountered."""
@@ -283,7 +355,7 @@ class SGFParser:
                     if g.variations:
                         raise GameTreeParseError(
                             "A node was encountered after a variation.")
-                    g.append(g.makeNode(self.parseNode()))
+                    g.append(Node(self.parseNode()))
                 elif match.group(1) == "(":  # found start of variation
                     g.variations = self.parseVariations()
                 else:  # found end of GameTree ")"
@@ -310,6 +382,12 @@ def self_test_2():
 
 
 def self_test_3():
+    p = Node([Property('GM', ["as"]), Property('SZ', ["as", "ac", "ab"])])
+    print(p)
+    pass
+
+
+def self_test_4():
     sgf_data = r"""(;GM [1]US[someone]CoPyright[\
   Permission to reproduce this game is given.]GN[a-b]EV[None]RE[B+Resign]
 PW[a]WR[2k*]PB[b]BR[4k*]PC[somewhere]DT[2000-01-16]SZ[19]TM[300]KM[4.5]
@@ -325,3 +403,4 @@ if __name__ == '__main__':
     self_test_1()
     self_test_2()
     self_test_3()
+    self_test_4()
