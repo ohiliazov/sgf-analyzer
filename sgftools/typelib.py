@@ -74,6 +74,14 @@ class SuperType:
         Concrete (as opposed to abstract) subclasses must define a class
         attribute 'self.TYPE' ('=type(Class)'), and methods '_reset(self)' and
         '_convert(self, data)'."""
+    data = None
+    TYPE = type(None)
+
+    def _reset(self):
+        pass
+
+    def _convert(self, data):
+        pass
 
     def __init__(self, data=None):
         """
@@ -489,10 +497,10 @@ class Mapping(Container):
         """ Returns a shallow (top-level) copy of 'self.data'."""
         return self.data.copy()
 
-    def update(self, dict):
+    def update(self, m_dict):
         """ Merges 'dict' into 'self.data'
             (i.e., 'for (k,v) in dict.items(): self.data[k]=v')."""
-        self.data.update(dict)
+        self.data.update(m_dict)
 
 
 class Dictionary(Mapping, MutableMixin):
