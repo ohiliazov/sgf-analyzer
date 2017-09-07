@@ -27,34 +27,32 @@ class ProgressBar(object):
 
         n = datetime.datetime.now()
         delta = n - self.start_time
-        ts = delta.total_seconds()
-        tt = ts / percent
-        tr = tt - ts
+        time_seconds = delta.total_seconds()
+        total_time = time_seconds / percent
+        time_remaining = total_time - time_seconds
 
-        H = int(tr / 3600)
-        tr -= H * 3600
-        M = int(tr / 60)
-        tr -= M * 60
-        S = int(tr)
+        hours = int(time_remaining / 3600)
+        time_remaining -= hours * 3600
+        minutes = int(time_remaining / 60)
+        time_remaining -= minutes * 60
+        seconds = int(time_remaining)
 
-        time_remaining = "%d:%02d:%02d" % (H, M, S)
-        return time_remaining
+        return "%d:%02d:%02d" % (hours, minutes, seconds)
 
     def elapsed_time(self):
 
         n = datetime.datetime.now()
         delta = n - self.start_time
 
-        ts = delta.total_seconds()
+        time_elapsed = delta.total_seconds()
 
-        H = int(ts / 3600)
-        ts -= H * 3600
-        M = int(ts / 60)
-        ts -= M * 60
-        S = int(ts)
+        hours = int(time_elapsed / 3600)
+        time_elapsed -= hours * 3600
+        minutes = int(time_elapsed / 60)
+        time_elapsed -= minutes * 60
+        seconds = int(time_elapsed)
 
-        time_elapsed = "%d:%02d:%02d" % (H, M, S)
-        return time_elapsed
+        return "%d:%02d:%02d" % (hours, minutes, seconds)
 
     def update(self, value, max_value):
         self.value = value
@@ -93,5 +91,6 @@ class ProgressBar(object):
         bar_str = "=" * self.width
         time_remaining = self.elapsed_time()
         self.stream.write(
-            "\r|%s| 100.00%% | Done. | Elapsed Time: %s                                             \n" % (
-            bar_str, time_remaining))
+            "\r|%s| 100.00%% | Done. | Elapsed Time: %s                                             \n" %
+            (bar_str, time_remaining)
+        )
