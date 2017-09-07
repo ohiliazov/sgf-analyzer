@@ -167,6 +167,8 @@ class Node(Dictionary):
             from 0 until 'IndexError'."""
         if type(key) is INT_TYPE:
             return self.order[key]
+        elif type(key) is STR_TYPE:
+            return self.data[key]
         else:
             return List(self)[key]
 

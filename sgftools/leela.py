@@ -44,17 +44,18 @@ class ReaderThread:
     def loop(self):
         while not self.stopped and not self.fd.closed:
             line = None
-            # fd.read_line() should return due to eof once the process is closed
+            # fd.readline() should return due to eof once the process is closed
             # at which point
             try:
-                line = self.fd.read_line()
+                line = self.fd.readline()
+                print(line)
             except IOError:
                 time.sleep(0.2)
                 pass
             if line is not None and len(line) > 0:
                 self.queue.put(line)
 
-    def read_line(self):
+    def readline(self):
         try:
             line = self.queue.get_nowait()
         except Empty:
@@ -167,7 +168,7 @@ class CLI(object):
 
     # Send command and wait for ack
     def send_command(self, cmd, expected_success_count=1, drain=True, timeout=20):
-        self.p.stdin.write(cmd + "\n")
+        self.p.stdin.write(cmd.encode() + "\n".encode())
         sleep_per_try = 0.1
         tries = 0
         success_count = 0
@@ -176,7 +177,7 @@ class CLI(object):
             tries += 1
             # Readline loop
             while True:
-                s = self.stdout_thread.read_line()
+                s = self.stdout_thread.readline()
                 # Leela follows GTP and prints a line starting with "=" upon success.
                 if s.strip() == '=':
                     success_count += 1
@@ -193,13 +194,14 @@ class CLI(object):
         xargs = []
 
         if self.verbosity > 0:
-            print("Starting leela...", end="\n", file=sys.stderr)
+            print("Starting leela...", file=sys.stderr)
 
         p = Popen([self.executable, '--gtp', '--noponder'] + xargs, stdout=PIPE, stdin=PIPE, stderr=PIPE)
         self.p = p
+
         self.stdout_thread = start_reader_thread(p.stdout)
         self.stderr_thread = start_reader_thread(p.stderr)
-
+        print(p.stdin.__str__())
         time.sleep(2)
         if self.verbosity > 0:
             print("Setting board size %d and komi %f to Leela" % (self.board_size, self.komi),
@@ -223,7 +225,7 @@ class CLI(object):
             stdout_thread.stop()
             stderr_thread.stop()
             try:
-                p.stdin.write('exit\n')
+                p.stdin.write(b'exit\n')
             except IOError:
                 pass
             time.sleep(0.1)
