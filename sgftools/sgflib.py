@@ -112,7 +112,7 @@ class Property(List):
     - self.name : string -- actual label used in the SGF data. For example, the
       property 'CoPyright[...]' has name 'CoPyright' and id 'CP'."""
 
-    def __init__(self, id, values, name=None):
+    def __init__(self, pid, values, name=None):
         """
             Initialize the 'Property'. Arguments:
             - id : string
@@ -120,15 +120,15 @@ class Property(List):
             - nodelist : 'GameTree' or list of 'Node' -- Stored in 'self.data'.
             - variations : list of 'GameTree' -- Stored in 'self.variations'."""
         List.__init__(self, values)  # XXX will _convert work here?
-        self.id = id
-        self.name = name or id
+        self.pid = pid
+        self.name = name or pid
 
     def __str__(self):
         return self.name + "[" + "][".join([_escape_text(x) for x in self]) + "]"
 
     def copy(self):
         n_values = [v for v in self]
-        return Property(self.id, n_values, self.name)
+        return Property(self.pid, n_values, self.name)
 
 
 class Node(Dictionary):
@@ -208,18 +208,18 @@ class Node(Dictionary):
             Adds a 'Property' to this 'Node'. Checks for duplicate properties
             (illegal), and maintains the property order. Argument:
             - prop : 'Property'"""
-        if prop.id in self.data:
-            self.append_data(prop.id, prop[:])
+        if prop.pid in self.data:
+            self.append_data(prop.pid, prop[:])
         # raise DuplicatePropertyError
         else:
-            self.data[prop.id] = prop
+            self.data[prop.pid] = prop
             self.order.append(prop)
 
-    def append_data(self, id, values):
-        new_prop = Property(id, self.data[id][:] + values)
-        self.data[id] = new_prop
+    def append_data(self, pid, values):
+        new_prop = Property(pid, self.data[pid][:] + values)
+        self.data[pid] = new_prop
         for i in range(0, len(self.order)):
-            if self.order[i].id == id:
+            if self.order[i].pid == pid:
                 self.order[i] = new_prop
 
 
@@ -402,7 +402,7 @@ class GameTree(List):
                 matches.append(n)
                 if not get_all:
                     break
-        else:   # get_all or not matches:
+        else:  # get_all or not matches:
             for v in self.variations:
                 matches = matches + v.property_search(pid, get_all)
                 if not get_all and matches:
@@ -566,45 +566,6 @@ class RootNodeSGFParser(SGFParser):
 
 # TESTS
 
-def selfTest1(onConsole=0):
-    """ Canned data test case"""
-    sgfdata = r"""       (;GM [1]US[someone]CoPyright[\
-  Permission to reproduce this game is given.]GN[a-b]EV[None]RE[B+Resign]
-PW[a]WR[2k*]PB[b]BR[4k*]PC[somewhere]DT[2000-01-16]SZ[19]TM[300]KM[4.5]
-HA[3]AB[pd][dp][dd];W[pp];B[nq];W[oq]C[ x started observation.
-](;B[qc]C[ [b\]: \\ hi x! ;-) \\];W[kc])(;B[hc];W[oe]))   """
-    print("\n\n********** Self-Test 1 **********\n")
-    print("Input data:\n")
-    print(sgfdata)
-    print("\n\nParsed data: ")
-    col = SGFParser(sgfdata).parse()
-    print("done\n")
-    cstr = str(col)
-    print(cstr, "\n")
-    print("Mainline:\n")
-    m = col[0].mainline()
-    print(m, "\n")
-    print("as GameTree:\n")
-    print(GameTree(m), "\n")
-    print("Tree traversal (forward):\n")
-    c = col.cursor()
-    while 1:
-        print("nodenum: %s; index: %s; children: %s; node: %s" % (c.node_num, c.index, len(c.children), c.node))
-        if c.atEnd:
-            break
-        c.next()
-    print("\nTree traversal (backward):\n")
-    while 1:
-        print("nodenum: %s; index: %s; children: %s; node: %s" % (c.node_num, c.index, len(c.children), c.node))
-        if c.atStart: break
-        c.previous()
-    print("\nSearch for property 'B':")
-    print(col[0].property_search("B", 1))
-    print("\nSearch for property 'C':")
-    print(col[0].property_search("C", 1))
-    pass
-
-
 def self_test_1():
     c = Collection()
     c.append("GM [1]US[someone]CoPyright[Permission to reproduce this game is given.]GN[a-b]EV[None]RE[B+Resign]")
@@ -636,10 +597,50 @@ HA[3]AB[pd][dp][dd];W[pp];B[nq];W[oq]C[ x started observation.
     pass
 
 
+def self_test_5():
+    """ Canned data test case"""
+    sgfdata = r"""       (;GM [1]US[someone]CoPyright[\
+  Permission to reproduce this game is given.]GN[a-b]EV[None]RE[B+Resign]
+PW[a]WR[2k*]PB[b]BR[4k*]PC[somewhere]DT[2000-01-16]SZ[19]TM[300]KM[4.5]
+HA[3]AB[pd][dp][dd];W[pp];B[nq];W[oq]C[ x started observation.
+](;B[qc]C[ [b\]: \\ hi x! ;-) \\];W[kc])(;B[hc];W[oe]))   """
+    print("\n\n********** Self-Test 1 **********\n")
+    print("Input data:\n")
+    print(sgfdata)
+    print("\n\nParsed data: ")
+    col = SGFParser(sgfdata).parse()
+    print("done\n")
+    cstr = str(col)
+    print(cstr, "\n")
+    print("Mainline:\n")
+    m = col[0].mainline()
+    print(m, "\n")
+    print("as GameTree:\n")
+    print(GameTree(m), "\n")
+    print("Tree traversal (forward):\n")
+    c = col.cursor()
+    while 1:
+        print("nodenum: %s; index: %s; children: %s; node: %s" % (c.node_num, c.index, len(c.children), c.node))
+        if c.atEnd:
+            break
+        c.next()
+    print("\nTree traversal (backward):\n")
+    while 1:
+        print("nodenum: %s; index: %s; children: %s; node: %s" % (c.node_num, c.index, len(c.children), c.node))
+        if c.atStart:
+            break
+        c.previous()
+    print("\nSearch for property 'B':")
+    print(col[0].property_search("B", 1))
+    print("\nSearch for property 'C':")
+    print(col[0].property_search("C", 1))
+    pass
+
+
 if __name__ == '__main__':
     print(__doc__)  # show module's documentation string
-    selfTest1()
     self_test_1()
     self_test_2()
     self_test_3()
     self_test_4()
+    self_test_5()
