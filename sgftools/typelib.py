@@ -471,6 +471,10 @@ class List(MutableSequence):
 class Mapping(Container):
     """ Superclass for classes which emulate mappings/hashes ('Dictionary')."""
 
+    def has_key(self, key):
+        """ Returns 1 (true) if 'self.data' has a key 'key', or 0 otherwise."""
+        return key in self.data
+
     def keys(self):
         """ Returns a new list holding all keys from 'self.data'."""
         return self.data.keys()

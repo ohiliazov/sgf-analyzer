@@ -1,17 +1,20 @@
-from sgftools import sgflib
+from sgftools.sgflib import Property, Node
 
 
 def insert_sequence(cursor, seq, data=None, callback=None):
     if data is None:
         data = [0] * len(seq)
-    for (color, mv), elem in zip(seq, data):
-        n_node = sgflib.Node()
+
+    for (color, move), elem in list(zip(seq, data)):
+        n_node = Node()
         assert color in ['white', 'black']
+
         if color == 'white':
             color = 'W'
         else:
             color = 'B'
-        n_node.add_property(sgflib.Property(n_node, color, [mv]))
+
+        n_node.add_property(Property(n_node, color, [move]))
         cursor.append_node(n_node)
         cursor.next(len(cursor.children) - 1)
 
@@ -27,9 +30,9 @@ def insert_sequence(cursor, seq, data=None, callback=None):
 
 
 def format_variation(cursor, seq):
-    mv_seq = [(color, mv) for color, mv, _stats, _mv_list in seq]
-    mv_data = [('black' if color == 'white' else 'white', stats, mv_list) for color, _mv, stats, mv_list in seq]
-    insert_sequence(cursor, mv_seq, mv_data, format_analysis)
+    move_seq = [(color, mv) for color, mv, _stats, _mv_list in seq]
+    move_data = [('black' if color == 'white' else 'white', stats, mv_list) for color, _mv, stats, mv_list in seq]
+    insert_sequence(cursor, move_seq, move_data, format_analysis)
 
 
 def pos_is_pass(pos):
@@ -62,32 +65,32 @@ def format_winrate(stats, move_list, board_size, next_game_move):
     return comment
 
 
-def format_delta_info(delta, transdelta, stats, this_move, board_size):
+def format_delta_info(delta, trans_delta, stats, this_move, board_size):
     comment = ""
-    lb_values = []
-    if transdelta <= -0.200:
+    LB_values = []
+    if trans_delta <= -0.200:
         comment += "==========================\n"
         comment += "Big Mistake? (%s) (delta %.2f%%)\n" % (format_pos(this_move, board_size), delta * 100)
         comment += "==========================\n"
         if not pos_is_pass(this_move):
-            lb_values.append("%s:%s" % (this_move, "?"))
-    elif transdelta <= -0.075:
+            LB_values.append("%s:%s" % (this_move, "?"))
+    elif trans_delta <= -0.075:
         comment += "==========================\n"
         comment += "Mistake? (%s) (delta %.2f%%)\n" % (format_pos(this_move, board_size), delta * 100)
         comment += "==========================\n"
         if not pos_is_pass(this_move):
-            lb_values.append("%s:%s" % (this_move, "?"))
-    elif transdelta <= -0.040:
+            LB_values.append("%s:%s" % (this_move, "?"))
+    elif trans_delta <= -0.040:
         comment += "==========================\n"
         comment += "Inaccuracy? (%s) (delta %.2f%%)\n" % (format_pos(this_move, board_size), delta * 100)
         comment += "==========================\n"
         if not pos_is_pass(this_move):
-            lb_values.append("%s:%s" % (this_move, "?"))
-    elif transdelta <= -0.005:
+            LB_values.append("%s:%s" % (this_move, "?"))
+    elif trans_delta <= -0.005:
         comment += "Leela slightly dislikes %s (delta %.2f%%).\n" % (format_pos(this_move, board_size), delta * 100)
 
     comment += "\n"
-    return comment, lb_values
+    return comment, LB_values
 
 
 def format_analysis(stats, move_list, this_move):
@@ -101,24 +104,34 @@ def format_analysis(stats, move_list, this_move):
         comment += "Visited %d nodes\n" % (stats['visits'])
         comment += "\n"
 
-        for L, mv in zip(abet, move_list):
-            comment += "%s -> Win%%: %.2f%% (%d visits) \n" % (L, mv['winrate'] * 100, mv['visits'])
+        for move_label, move in list(zip(abet, move_list)):
+            comment += "%s -> Win%%: %.2f%% (%d visits) \n" % (move_label, move['winrate'] * 100, move['visits'])
 
     # Check for pos being "" or "tt", values which indicate passes, and don't attempt to display markers for them
-    lb_values = ["%s:%s" % (mv['pos'], L) for L, mv in zip(abet, move_list) if mv['pos'] != "" and mv['pos'] != "tt"]
+    LB_values = ["%s:%s" % (mv['pos'], L) for L, mv in zip(abet, move_list) if mv['pos'] != "" and mv['pos'] != "tt"]
     mvs = [mv['pos'] for mv in move_list]
-    tr_values = [this_move] if this_move not in mvs and this_move is not None and not pos_is_pass(this_move) else []
-    return comment, lb_values, tr_values
+    TR_values = [this_move] if this_move not in mvs and this_move is not None and not pos_is_pass(this_move) else []
+    return comment, LB_values, TR_values
 
 
-def annotate_sgf(cursor, comment, lb_values, tr_values):
+def annotate_sgf(cursor, comment, LB_values, TR_values):
     c_node = cursor.node
     if c_node.has_key('C'):
         c_node['C'].data[0] += comment
     else:
-        c_node.add_property(c_node.makeProperty('C', [comment]))
+        c_node.add_property(Property(c_node, 'C', [comment]))
 
-    if len(lb_values) > 0:
-        c_node.add_property(c_node.makeProperty('LB', lb_values))
-    if len(tr_values) > 0:
-        c_node.add_property(c_node.makeProperty('TR', tr_values))
+    if len(LB_values) > 0:
+        c_node.add_property(Property(c_node, 'LB', LB_values))
+
+    if len(TR_values) > 0:
+        c_node.add_property(Property(c_node, 'TR', TR_values))
+
+
+def self_test_1():
+    print(pos_is_pass(""), pos_is_pass("tt"), pos_is_pass('ab'))
+    print(format_pos("aa", 19), format_pos("jj", 19), format_pos("ss", 19))
+
+
+if __name__ == '__main__':
+    self_test_1()
