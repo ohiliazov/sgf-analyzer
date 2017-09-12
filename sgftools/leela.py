@@ -48,16 +48,19 @@ class ReaderThread:
             # at which point
             try:
                 line = self.fd.readline()
-                print(line)
+                # print(line)
             except IOError:
                 time.sleep(0.2)
                 pass
             if line is not None and len(line) > 0:
                 self.queue.put(line)
+                # print(self.queue.queue)
+                # print(self.queue.get_nowait())
 
     def readline(self):
         try:
             line = self.queue.get_nowait()
+            # print(line)
         except Empty:
             return ""
         return line
@@ -67,9 +70,11 @@ class ReaderThread:
         while True:
             try:
                 line = self.queue.get_nowait()
+                # print(line)
             except Empty:
                 break
             lines.append(line)
+        # print(lines)
         return lines
 
 
@@ -117,8 +122,9 @@ class CLI(object):
     def history_hash(self):
         h = hashlib.md5()
         for cmd in self.history:
-            _, c, p = cmd.split()
-            h.update(c[0] + p)
+            _, c, p = cmd.decode().split()
+            # print(cmd, _, c[0], p)
+            h.update(bytes((c[0] + p), 'utf-8'))
         return h.hexdigest()
 
     def add_move(self, color, pos):
@@ -127,7 +133,7 @@ class CLI(object):
         else:
             pos = self.convert_position(pos)
         cmd = "play %s %s" % (color, pos)
-        self.history.append(cmd)
+        self.history.append(cmd.encode())
 
     def pop_move(self):
         self.history.pop()
@@ -141,7 +147,7 @@ class CLI(object):
                 return "white"
             else:
                 return "black"
-        elif 'white' in self.history[-1]:
+        elif b'white' in self.history[-1]:
             return 'black'
         else:
             return 'white'
@@ -164,22 +170,25 @@ class CLI(object):
     def drain(self):
         so = self.stdout_thread.read_all_lines()
         se = self.stderr_thread.read_all_lines()
+        print(so, se)
         return so, se
 
     # Send command and wait for ack
     def send_command(self, cmd, expected_success_count=1, drain=True, timeout=20):
-        self.p.stdin.write(cmd.encode() + "\n".encode())
+        self.p.stdin.write(cmd + "\n")
         sleep_per_try = 0.1
         tries = 0
         success_count = 0
         while tries * sleep_per_try <= timeout and self.p is not None:
             time.sleep(sleep_per_try)
             tries += 1
+            self.p.stdin.flush()
+            self.p.stdout.flush()
             # Readline loop
             while True:
                 s = self.stdout_thread.readline()
                 # Leela follows GTP and prints a line starting with "=" upon success.
-                if s.strip() == '=':
+                if '=' in s:
                     success_count += 1
                     if success_count >= expected_success_count:
                         if drain:
@@ -196,12 +205,11 @@ class CLI(object):
         if self.verbosity > 0:
             print("Starting leela...", file=sys.stderr)
 
-        p = Popen([self.executable, '--gtp', '--noponder'] + xargs, stdout=PIPE, stdin=PIPE, stderr=PIPE)
+        p = Popen([self.executable] + xargs, stdout=PIPE, stdin=PIPE, stderr=PIPE, universal_newlines=True)
         self.p = p
 
         self.stdout_thread = start_reader_thread(p.stdout)
         self.stderr_thread = start_reader_thread(p.stderr)
-        print(p.stdin.__str__())
         time.sleep(2)
         if self.verbosity > 0:
             print("Setting board size %d and komi %f to Leela" % (self.board_size, self.komi),
@@ -210,6 +218,7 @@ class CLI(object):
         self.send_command('boardsize %d' % self.board_size)
         self.send_command('komi %f' % self.komi)
         self.send_command('time_settings 0 %d 1' % self.seconds_per_search)
+        self.send_command('play b a1')
 
     def stop(self):
         if self.verbosity > 0:
@@ -225,7 +234,7 @@ class CLI(object):
             stdout_thread.stop()
             stderr_thread.stop()
             try:
-                p.stdin.write(b'exit\n')
+                p.stdin.write('exit\n')
             except IOError:
                 pass
             time.sleep(0.1)

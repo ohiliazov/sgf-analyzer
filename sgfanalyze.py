@@ -157,7 +157,7 @@ def do_analyze(leela, base_dir, verbosity):
     if os.path.exists(ckpt_fn):
         if verbosity > 1:
             print("Loading checkpoint file: " + ckpt_fn, end="\n", file=sys.stderr)
-        with open(ckpt_fn, 'r') as ckpt_file:
+        with open(ckpt_fn, 'rb') as ckpt_file:
             stats, move_list = pickle.load(ckpt_file)
     else:
         leela.reset()
