@@ -4,7 +4,7 @@ import time
 import hashlib
 from queue import Queue, Empty
 from threading import Thread
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE  # STDOUT
 
 update_regex = r'Nodes: ([0-9]+), ' \
                r'Win: ([0-9]+\.[0-9]+)\% \(MC:[0-9]+\.[0-9]+\%\/VN:[0-9]+\.[0-9]+\%\), ' \
@@ -13,8 +13,11 @@ update_regex_no_vn = r'Nodes: ([0-9]+), ' \
                      r'Win: ([0-9]+\.[0-9]+)\%, ' \
                      r'PV:(( [A-Z][0-9]+)+)'
 
-status_regex = r'MC winrate=([0-9]+\.[0-9]+), NN eval=([0-9]+\.[0-9]+), score=([BW]\+[0-9]+\.[0-9]+)'
-status_regex_no_vn = r'MC winrate=([0-9]+\.[0-9]+), score=([BW]\+[0-9]+\.[0-9]+)'
+status_regex = r'MC winrate=([0-9]+\.[0-9]+), ' \
+               r'NN eval=([0-9]+\.[0-9]+), ' \
+               r'score=([BW]\+[0-9]+\.[0-9]+)'
+status_regex_no_vn = r'MC winrate=([0-9]+\.[0-9]+), ' \
+                     r'score=([BW]\+[0-9]+\.[0-9]+)'
 
 move_regex = r'^([A-Z][0-9]+) -> +([0-9]+) \(W: +(\-?[0-9]+\.[0-9]+)\%\) \(U: +(\-?[0-9]+\.[0-9]+)\%\) ' \
              r'\(V: +([0-9]+\.[0-9]+)\%: +([0-9]+)\) \(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'
@@ -48,19 +51,15 @@ class ReaderThread:
             # at which point
             try:
                 line = self.fd.readline()
-                # print(line)
             except IOError:
                 time.sleep(0.2)
                 pass
             if line is not None and len(line) > 0:
                 self.queue.put(line)
-                # print(self.queue.queue)
-                # print(self.queue.get_nowait())
 
     def readline(self):
         try:
             line = self.queue.get_nowait()
-            # print(line)
         except Empty:
             return ""
         return line
@@ -70,11 +69,9 @@ class ReaderThread:
         while True:
             try:
                 line = self.queue.get_nowait()
-                # print(line)
             except Empty:
                 break
             lines.append(line)
-        # print(lines)
         return lines
 
 
@@ -99,12 +96,13 @@ class CLI(object):
         self.komi = komi
         self.seconds_per_search = seconds_per_search + 1  # add one to account for lag time
         self.p = None
+        self.stdout_thread = None
+        self.stderr_thread = None
 
     def convert_position(self, pos):
         abet = 'abcdefghijklmnopqrstuvwxyz'
         mapped = 'abcdefghjklmnopqrstuvwxyz'
-        pos = '%s%d' % (mapped[abet.index(pos[0])], self.board_size - abet.index(pos[1]))
-        return pos
+        return '%s%d' % (mapped[abet.index(pos[0])], self.board_size - abet.index(pos[1]))
 
     def parse_position(self, pos):
         # Pass moves are the empty string in sgf files
@@ -123,7 +121,6 @@ class CLI(object):
         h = hashlib.md5()
         for cmd in self.history:
             _, c, p = cmd.decode().split()
-            # print(cmd, _, c[0], p)
             h.update(bytes((c[0] + p), 'utf-8'))
         return h.hexdigest()
 
@@ -133,24 +130,19 @@ class CLI(object):
         else:
             pos = self.convert_position(pos)
         cmd = "play %s %s" % (color, pos)
-        self.history.append(cmd.encode())
+        self.history.append(cmd)
 
     def pop_move(self):
         self.history.pop()
 
     def clear_history(self):
-        self.history = []
+        self.history.clear()
 
-    def whose_turn(self):
+    def whoseturn(self):
         if len(self.history) == 0:
-            if self.is_handicap_game:
-                return "white"
-            else:
-                return "black"
-        elif b'white' in self.history[-1]:
-            return 'black'
+            return "white" if self.is_handicap_game else "black"
         else:
-            return 'white'
+            return "black" if "white" in self.history[-1] else "white"
 
     def parse_status_update(self, message):
         m = re.match(update_regex, message)
@@ -166,24 +158,26 @@ class CLI(object):
             return {'visits': visits, 'winrate': winrate, 'seq': seq}
         return {}
 
-    # Drain all remaining stdout and stderr current contents
+    @staticmethod
+    def to_fraction(v):
+        return 0.01 * float(v.strip())
+
     def drain(self):
+        # Drain all remaining stdout and stderr current contents
         so = self.stdout_thread.read_all_lines()
         se = self.stderr_thread.read_all_lines()
-        print(so, se)
         return so, se
 
-    # Send command and wait for ack
     def send_command(self, cmd, expected_success_count=1, drain=True, timeout=20):
         self.p.stdin.write(cmd + "\n")
+        # time.sleep(1)
+        self.p.stdin.flush()
         sleep_per_try = 0.1
         tries = 0
         success_count = 0
         while tries * sleep_per_try <= timeout and self.p is not None:
             time.sleep(sleep_per_try)
             tries += 1
-            self.p.stdin.flush()
-            self.p.stdout.flush()
             # Readline loop
             while True:
                 s = self.stdout_thread.readline()
@@ -205,24 +199,24 @@ class CLI(object):
         if self.verbosity > 0:
             print("Starting leela...", file=sys.stderr)
 
-        p = Popen([self.executable] + xargs, stdout=PIPE, stdin=PIPE, stderr=PIPE, universal_newlines=True)
+        p = Popen([self.executable, '--gtp', '--noponder'] + xargs, stdout=PIPE, stdin=PIPE, stderr=PIPE,
+                  universal_newlines=True)
         self.p = p
 
         self.stdout_thread = start_reader_thread(p.stdout)
         self.stderr_thread = start_reader_thread(p.stderr)
         time.sleep(2)
+
         if self.verbosity > 0:
-            print("Setting board size %d and komi %f to Leela" % (self.board_size, self.komi),
-                  end="\n", file=sys.stderr)
+            print("Setting board size %d and komi %f to Leela" % (self.board_size, self.komi), file=sys.stderr)
 
         self.send_command('boardsize %d' % self.board_size)
         self.send_command('komi %f' % self.komi)
         self.send_command('time_settings 0 %d 1' % self.seconds_per_search)
-        self.send_command('play b a1')
 
     def stop(self):
         if self.verbosity > 0:
-            print("Stopping leela...", end="\n", file=sys.stderr)
+            print("Stopping leela...", file=sys.stderr)
 
         if self.p is not None:
             p = self.p
@@ -243,8 +237,8 @@ class CLI(object):
             except OSError:
                 pass
 
-    def play_move(self, pos):
-        color = self.whose_turn()
+    def playmove(self, pos):
+        color = self.whoseturn()
         cmd = 'play %s %s' % (color, pos)
         self.send_command(cmd)
         self.history.append(cmd)
@@ -252,7 +246,7 @@ class CLI(object):
     def reset(self):
         self.send_command('clear_board')
 
-    def board_state(self):
+    def boardstate(self):
         self.send_command("showboard", drain=False)
         (so, se) = self.drain()
         return "".join(se)
@@ -265,14 +259,14 @@ class CLI(object):
     def analyze(self):
         p = self.p
         if self.verbosity > 1:
-            print("Analyzing state:", end="\n", file=sys.stderr)
-            print(self.whose_turn() + " to play", end="\n", file=sys.stderr)
-            print(self.board_state(), end="\n", file=sys.stderr)
+            print("Analyzing state:", file=sys.stderr)
+            print(self.whoseturn() + " to play", file=sys.stderr)
+            print(self.boardstate(), file=sys.stderr)
 
-        self.send_command('time_left black %d 1\n' % self.seconds_per_search)
-        self.send_command('time_left white %d 1\n' % self.seconds_per_search)
+        self.send_command('time_left black %d 1' % self.seconds_per_search)
+        self.send_command('time_left white %d 1' % self.seconds_per_search)
 
-        cmd = "genmove %s\n" % (self.whose_turn())
+        cmd = "genmove %s\n" % self.whoseturn()
         p.stdin.write(cmd)
 
         updated = 0
@@ -283,16 +277,15 @@ class CLI(object):
             o, l = self.drain()
             stdout.extend(o)
             stderr.extend(l)
-
             d = self.parse_status_update("".join(l))
             if 'visits' in d:
                 if self.verbosity > 0:
-                    print("Visited %d positions" % (d['visits']), end="\n", file=sys.stderr)
+                    print("Visited %d positions" % d['visits'], file=sys.stderr)
                 updated = 0
             updated += 1
             if re.search(finished_regex, ''.join(stdout)) is not None:
-                if re.search(stats_regex, ''.join(stderr)) is not None or re.search(bookmove_regex,
-                                                                                    ''.join(stderr)) is not None:
+                if re.search(stats_regex, ''.join(stderr)) is not None \
+                        or re.search(bookmove_regex, ''.join(stderr)) is not None:
                     break
             time.sleep(1)
 
@@ -304,34 +297,28 @@ class CLI(object):
 
         stats, move_list = self.parse(stdout, stderr)
         if self.verbosity > 0:
-            print("Chosen move: %s" % (stats['chosen']), end="\n", file=sys.stderr)
+            print("Chosen move: %s" % (stats['chosen']), file=sys.stderr)
             if 'best' in stats:
-                print("Best move: %s" % (stats['best']), end="\n", file=sys.stderr)
-                print("Winrate: %f" % (stats['winrate']), end="\n", file=sys.stderr)
-                print("Visits: %d" % (stats['visits']), end="\n", file=sys.stderr)
+                print("Best move: %s" % (stats['best']), file=sys.stderr)
+                print("Winrate: %f" % (stats['winrate']), file=sys.stderr)
+                print("Visits: %d" % (stats['visits']), file=sys.stderr)
 
         return stats, move_list
 
-    def to_fraction(self, v):
-        v = v.strip()
-        return 0.01 * float(v)
-
     def parse(self, stdout, stderr):
         if self.verbosity > 2:
-            print("LEELA STDOUT", end="\n", file=sys.stderr)
-            print("".join(stdout), end="\n", file=sys.stderr)
-            print("END OF LEELA STDOUT", end="\n", file=sys.stderr)
-            print("LEELA STDERR", end="\n", file=sys.stderr)
-            print("".join(stderr), end="\n", file=sys.stderr)
-            print("END OF LEELA STDERR", end="\n", file=sys.stderr)
+            print("LEELA STDOUT", file=sys.stderr)
+            print("".join(stdout), file=sys.stderr)
+            print("END OF LEELA STDOUT", file=sys.stderr)
+            print("LEELA STDERR", file=sys.stderr)
+            print("".join(stderr), file=sys.stderr)
+            print("END OF LEELA STDERR", file=sys.stderr)
 
         stats = {}
         move_list = []
 
-        flip_winrate = self.whose_turn() == "white"
-
         def maybe_flip(winrate):
-            return (1.0 - winrate) if flip_winrate else winrate
+            return (1.0 - winrate) if self.whoseturn() == "white" else winrate
 
         finished = False
         summarized = False
@@ -409,9 +396,7 @@ class CLI(object):
         m = re.search(finished_regex, "".join(stdout))
         if m is not None:
             if m.group(1) == "resign":
-                stats['chosen'] = "resign"
-            else:
-                stats['chosen'] = self.parse_position(m.group(1))
+                stats['chosen'] = "resign" if m.group(1) == "resign" else self.parse_position(m.group(1))
 
         if 'bookmoves' in stats and len(move_list) == 0:
             move_list.append({'pos': stats['chosen'], 'is_book': True})
@@ -419,14 +404,14 @@ class CLI(object):
             required_keys = ['mc_winrate', 'margin', 'best', 'winrate', 'visits']
             for k in required_keys:
                 if k not in stats:
-                    print("WARNING: analysis stats missing data %s" % k, end="\n", file=sys.stderr)
+                    print("WARNING: analysis stats missing %s data" % k, file=sys.stderr)
 
             move_list = sorted(move_list,
-                               key=(lambda info: 1000000000000000 if info['pos'] == stats['best'] else info['visits']),
+                               key=(lambda key: 1000000000000000 if info['pos'] == stats['best'] else info['visits']),
                                reverse=True)
             move_list = [info for (i, info) in enumerate(move_list) if i == 0 or info['visits'] > 0]
 
-            # In the case where leela resigns, rather than resigning, just replace with the move Leela did think was best
+            # In the case where leela resigns, just replace with the move Leela did think was best
             if stats['chosen'] == "resign":
                 stats['chosen'] = stats['best']
 
