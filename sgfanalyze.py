@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 import os, sys
 import argparse
 import hashlib
@@ -6,25 +5,24 @@ import pickle
 import traceback
 import math
 from sgftools import gotools, leela, annotations, progressbar, sgflib
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
-# Stdev of bell curve whose cdf we take to be the "real" probability given Leela's winrate
 DEFAULT_STDEV = 0.22
-
 RESTART_COUNT = 1
 
 
 def graph_winrates(winrates, color, outp_fn):
-    import matplotlib as mpl
     mpl.use('Agg')
-    import matplotlib.pyplot as plt
 
     x = []
     y = []
+
     for move_num in sorted(winrates.keys()):
         pl, wr = winrates[move_num]
 
         if pl != color:
-            wr = 1. - wr
+            wr = 1.0 - wr
         x.append(move_num)
         y.append(wr)
 
@@ -38,29 +36,33 @@ def graph_winrates(winrates, color, outp_fn):
     plt.savefig(outp_fn, dpi=200, format='pdf', bbox_inches='tight')
 
 
-# Also returns the move played, if any, else None
 def add_moves_to_leela(C, leela):
     this_move = None
+
     if 'W' in C.node.keys():
         this_move = C.node['W'].data[0]
         leela.add_move('white', this_move)
+
     if 'B' in C.node.keys():
         this_move = C.node['B'].data[0]
         leela.add_move('black', this_move)
+
     # SGF commands to add black or white stones, often used for setting up handicap and such
     if 'AB' in C.node.keys():
         for move in C.node['AB'].data:
             leela.add_move('black', move)
+
     if 'AW' in C.node.keys():
         for move in C.node['AW'].data:
             leela.add_move('white', move)
+
     return this_move
 
 
 # Make a function that applies a transform to the winrate that stretches out the middle range and squashes the extreme ranges,
 # to make it a more linear function and suppress Leela's suggestions in won/lost games.
-# Currently, the CDF of the probability distribution from 0 to 1 given by x^k * (1-x)^k, where k is set to be the value such that
-# the stdev of the distribution is stdev.
+# Currently, the CDF of the probability distribution from 0 to 1 given by x^k * (1-x)^k,
+# where k is set to be the value such that the stdev of the distribution is stdev.
 def winrate_transformer(stdev, verbosity):
     def logfactorial(x):
         return math.lgamma(x + 1)
@@ -73,9 +75,10 @@ def winrate_transformer(stdev, verbosity):
     # k!^2 / (2k+1)!
     # And we get:
     # (k+1)(k+2) / (2k+2) / (2k+3) - (k+1) / (2k+2) + (1/4)
+    # OR 0.25 - (k ** 2 + 2 * k + 1) / (2 * k ** 2 + 5 * k + 3) / 2
     def variance(k):
         k = float(k)
-        return (k + 1) * (k + 2) / (2 * k + 2) / (2 * k + 3) - (k + 1) / (2 * k + 2) + 0.25
+        return 0.25 - (k ** 2 + 2 * k + 1) / (2 * k ** 2 + 5 * k + 3) / 2
 
     # Perform binary search to find the appropriate k
     def find_k(lower, upper):
@@ -100,10 +103,11 @@ def winrate_transformer(stdev, verbosity):
     k = find_k(0, upper)
 
     if verbosity > 2:
-        print("Using k=%f, stdev=%f" % (k, math.sqrt(variance(k))), end="\n", file=sys.stderr)
+        print("Using k=%f, stdev=%f" % (k, math.sqrt(variance(k))), file=sys.stderr)
 
     def unnormpdf(x):
-        if x <= 0 or x >= 1 or 1 - x <= 0:
+        # Gelya: deleted  1 - x <= 0
+        if x <= 0 or x >= 1:
             return 0
         a = math.log(x)
         b = math.log(1 - x)
@@ -141,8 +145,8 @@ def retry_analysis(fn):
                 return fn(*args, **kwargs)
             except Exception as e:
                 if i + 1 == RESTART_COUNT + 1:
-                    raise
-                print("Error in leela, retrying analysis...", end="\n", file=sys.stderr)
+                    raise e
+                print("Error in leela, retrying analysis...", file=sys.stderr)
 
     return wrapped
 
@@ -151,20 +155,23 @@ def retry_analysis(fn):
 def do_analyze(leela, base_dir, verbosity):
     ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(leela.seconds_per_search) + "sec"
     ckpt_fn = os.path.join(base_dir, ckpt_hash)
+
     if verbosity > 2:
-        print("Looking for checkpoint file: " + ckpt_fn, end="\n", file=sys.stderr)
+        print("Looking for checkpoint file: %s" % ckpt_fn, file=sys.stderr)
 
     if os.path.exists(ckpt_fn):
         if verbosity > 1:
-            print("Loading checkpoint file: " + ckpt_fn, end="\n", file=sys.stderr)
+            print("Loading checkpoint file: %s" % ckpt_fn, file=sys.stderr)
         with open(ckpt_fn, 'rb') as ckpt_file:
             stats, move_list = pickle.load(ckpt_file)
+            ckpt_file.close()
     else:
         leela.reset()
         leela.goto_position()
         stats, move_list = leela.analyze()
-        with open(ckpt_fn, 'w') as ckpt_file:
+        with open(ckpt_fn, 'wb') as ckpt_file:
             pickle.dump((stats, move_list), ckpt_file)
+            ckpt_file.close()
 
     return stats, move_list
 
@@ -173,12 +180,12 @@ def do_analyze(leela, base_dir, verbosity):
 # Iteratively expands a tree of moves by expanding on the leaf with the highest "probability of reaching".
 def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, game_move, base_dir, verbosity):
     if 'bookmoves' in stats or len(move_list) <= 0:
-        return
+        return None
 
-    root_color = leela.whose_turn()
+    rootcolor = leela.whoseturn()
     leaves = []
     tree = {"children": [], "is_root": True, "history": [], "explored": False, "prob": 1.0, "stats": stats,
-            "move_list": move_list, "color": root_color}
+            "move_list": move_list, "color": rootcolor}
 
     def expand(node, stats, move_list):
         assert node["color"] in ['white', 'black']
@@ -187,23 +194,24 @@ def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, g
             # possible for book moves
             if "is_book" in move:
                 return 1.0
-            elif node["color"] == root_color:
+            elif node["color"] == rootcolor:
                 return move["visits"] ** 1.0
             else:
                 return (move["policy_prob"] + move["visits"]) / 2.0
 
+        def child_prob(i, move):
+            return child_prob_raw(i, move) / probsum
+
         probsum = 0.0
         for (i, move) in enumerate(move_list):
             probsum += child_prob_raw(i, move)
-
-        def child_prob(i, move):
-            return child_prob_raw(i, move) / probsum
 
         for (i, move) in enumerate(move_list):
             # Don't expand on the actual game line as a variation!
             if node["is_root"] and move["pos"] == game_move:
                 node["children"].append(None)
                 continue
+
             subhistory = node["history"][:]
             subhistory.append(move["pos"])
             prob = node["prob"] * child_prob(i, move)
@@ -224,7 +232,7 @@ def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, g
 
     def search(node):
         for mv in node["history"]:
-            leela.add_move(leela.whose_turn(), mv)
+            leela.add_move(leela.whoseturn(), mv)
         stats, move_list = do_analyze(leela, base_dir, verbosity)
         expand(node, stats, move_list)
 
@@ -240,9 +248,11 @@ def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, g
     def advance(C, color, mv):
         found_child_idx = None
         clr = 'W' if color == 'white' else 'B'
+
         for j in range(len(C.children)):
             if clr in C.children[j].keys() and C.children[j][clr].data[0] == mv:
                 found_child_idx = j
+
         if found_child_idx is not None:
             C.next(found_child_idx)
         else:
@@ -256,17 +266,21 @@ def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, g
             annotations.annotate_sgf(C, annotations.format_winrate(node["stats"], node["move_list"], board_size, None),
                                      [], [])
             move_list_to_display = []
+
             # Only display info for the principal variation or for lines that have been explored.
             for i in range(len(node["children"])):
                 child = node["children"][i]
+
                 if child is not None and (i == 0 or child["explored"]):
                     move_list_to_display.append(node["move_list"][i])
+
             (analysis_comment, lb_values, tr_values) = annotations.format_analysis(node["stats"], move_list_to_display,
                                                                                    None)
             annotations.annotate_sgf(C, analysis_comment, lb_values, tr_values)
 
         for i in range(len(node["children"])):
             child = node["children"][i]
+
             if child is not None:
                 if child["explored"]:
                     advance(C, node["color"], child["history"][-1])
@@ -277,9 +291,11 @@ def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, g
                     pv = node["move_list"][i]["pv"]
                     c = node["color"]
                     num_to_show = min(len(pv), max(1, len(pv) * 2 / 3 - 1))
+
                     for k in range(num_to_show):
                         advance(C, c, pv[k])
                         c = 'black' if c == 'white' else 'white'
+
                     for k in range(num_to_show):
                         C.previous()
 
@@ -297,10 +313,11 @@ def calculate_tasks_left(sgf, start_m, end_n, comment_requests_analyze, comment_
         analysis_mode = None
         if args.analyze_start <= move_num <= args.analyze_end:
             analysis_mode = 'analyze'
-        if move_num in comment_requests_analyze or \
-                        (move_num - 1) in comment_requests_analyze or \
-                        (move_num - 1) in comment_requests_variations:
+
+        if move_num in comment_requests_analyze or (move_num - 1) in comment_requests_analyze or (
+                    move_num - 1) in comment_requests_variations:
             analysis_mode = 'analyze'
+
         if move_num in comment_requests_variations:
             analysis_mode = 'variations'
 
@@ -324,14 +341,12 @@ if __name__ == '__main__':
                         help="Analyze game starting at this move (default=0)")
     parser.add_argument('--stop', dest='analyze_end', default=1000, type=int, metavar="MOVENUM",
                         help="Analyze game stopping at this move (default=1000)")
-
     parser.add_argument('--analyze-thresh', dest='analyze_threshold', default=default_analyze_thresh, type=float,
                         metavar="T",
                         help="Display analysis on moves losing approx at least this much win rate when the game is close (default=0.03)")
     parser.add_argument('--var-thresh', dest='variations_threshold', default=default_var_thresh, type=float,
                         metavar="T",
                         help="Explore variations on moves losing approx at least this much win rate when the game is close (default=0.03)")
-
     parser.add_argument('--secs-per-search', dest='seconds_per_search', default=10, type=float, metavar="S",
                         help="How many seconds to use per search (default=10)")
     parser.add_argument('--nodes-per-var', dest='nodes_per_variation', default=8, type=int, metavar="N",
@@ -342,8 +357,7 @@ if __name__ == '__main__':
                         help="Set the verbosity level, 0: progress only, 1: progress+status, 2: progress+status+state")
     required.add_argument('--leela', dest='executable', required=True, metavar="CMD",
                           help="Command to run Leela executable")
-    parser.add_argument('--cache', dest='ckpt_dir', metavar="DIR",
-                        default=os.path.expanduser('~/.leela_checkpoints'),
+    parser.add_argument('--cache', dest='ckpt_dir', metavar="DIR", default=os.path.expanduser('~/.leela_checkpoints'),
                         help="Set a directory to cache partially complete analyses, default ~/.leela_checkpoints")
     parser.add_argument('--restarts', default=2, type=int, metavar="N",
                         help="If leela crashes, retry the analysis step this many times before reporting a failure")
@@ -357,61 +371,72 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     sgf_fn = args.SGF_FILE
+
     if not os.path.exists(sgf_fn):
-        parser.error("No such file: %s" % sgf_fn)
+        parser.error("No such file: %s" % (sgf_fn))
     sgf = gotools.import_sgf(sgf_fn)
 
     RESTART_COUNT = args.restarts
 
     if not os.path.exists(args.ckpt_dir):
         os.mkdir(args.ckpt_dir)
-    base_hash = hashlib.md5(os.path.abspath(sgf_fn).encode('utf-8')).hexdigest()
+
+    base_hash = hashlib.md5(os.path.abspath(sgf_fn).encode()).hexdigest()
     base_dir = os.path.join(args.ckpt_dir, base_hash)
+
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
+
     if args.verbosity > 1:
-        print("Checkpoint dir: " + base_dir, end="\n", file=sys.stderr)
+        print("Checkpoint dir: %s" % base_dir, file=sys.stderr)
 
     comment_requests_analyze = {}
     comment_requests_variations = {}
-
     C = sgf.cursor()
+
     if 'SZ' in C.node.keys():
         board_size = int(C.node['SZ'].data[0])
     else:
         board_size = 19
 
     if board_size != 19:
-        print("Warning: board size is not 19 so Leela could be much weaker and less accurate",
-              end="\n", file=sys.stderr)
+        print("Warning: board size is not 19 so Leela could be much weaker and less accurate", file=sys.stderr)
+
         if args.analyze_threshold == default_analyze_thresh or args.variations_threshold == default_var_thresh:
-            print("Warning: Consider also setting --analyze-thresh and --var-thresh higher", end="\n", file=sys.stderr)
+            print("Warning: Consider also setting --analyze-thresh and --var-thresh higher", file=sys.stderr)
 
     move_num = -1
     C = sgf.cursor()
+
     while not C.atEnd:
         C.next()
         move_num += 1
+
         if 'C' in C.node.keys():
             if 'analyze' in C.node['C'].data[0]:
                 comment_requests_analyze[move_num] = True
+
             if 'variations' in C.node['C'].data[0]:
                 comment_requests_variations[move_num] = True
 
     if args.wipe_comments:
         C = sgf.cursor()
         cnode = C.node
+
         if cnode.has_key('C'):
             cnode['C'].data[0] = ""
+
         while not C.atEnd:
             C.next()
             cnode = C.node
+
             if cnode.has_key('C'):
                 cnode['C'].data[0] = ""
 
     C = sgf.cursor()
     is_handicap_game = False
     handicap_stone_count = 0
+
     if 'HA' in C.node.keys() and int(C.node['HA'].data[0]) > 1:
         is_handicap_game = True
         handicap_stone_count = int(C.node['HA'].data[0])
@@ -424,16 +449,17 @@ if __name__ == '__main__':
     komi = 7.5
     if 'KM' in C.node.keys():
         komi = float(C.node['KM'].data[0])
+
         if is_handicap_game and is_japanese_rules:
             old_komi = komi
             komi = old_komi + handicap_stone_count
             print("Adjusting komi from %f to %f in converting Japanese rules with %d handicap to Chinese rules" % (
-                old_komi, komi, handicap_stone_count), end="\n", file=sys.stderr)
+                old_komi, komi, handicap_stone_count), file=sys.stderr)
 
     else:
         if is_handicap_game:
             komi = 0.5
-        print("Warning: Komi not specified, assuming %f" % komi, end="\n", file=sys.stderr)
+        print("Warning: Komi not specified, assuming %f" % komi, file=sys.stderr)
 
     (analyze_tasks_initial, variations_tasks_initial) = calculate_tasks_left(sgf, args.analyze_start, args.analyze_end,
                                                                              comment_requests_analyze,
@@ -461,11 +487,11 @@ if __name__ == '__main__':
 
 
     transform_winrate = winrate_transformer(DEFAULT_STDEV, args.verbosity)
-    analyze_threshold = transform_winrate(0.5 + 0.5 * args.analyze_threshold) - transform_winrate(
-        0.5 - 0.5 * args.analyze_threshold)
-    variations_threshold = transform_winrate(0.5 + 0.5 * args.variations_threshold) - transform_winrate(
-        0.5 - 0.5 * args.variations_threshold)
-    print("Executing approx %.0f analysis steps" % approx_tasks_max(), end="\n", file=sys.stderr)
+    analyze_threshold = transform_winrate(0.5 + 0.5 * args.analyze_threshold) - \
+                        transform_winrate(0.5 - 0.5 * args.analyze_threshold)
+    variations_threshold = transform_winrate(0.5 + 0.5 * args.variations_threshold) - \
+                           transform_winrate(0.5 - 0.5 * args.variations_threshold)
+    print("Executing approx %.0f analysis steps" % approx_tasks_max(), file=sys.stderr)
 
     pb = progressbar.ProgressBar(max_value=approx_tasks_max())
     pb.start()
@@ -496,12 +522,14 @@ if __name__ == '__main__':
 
         leela.start()
         add_moves_to_leela(C, leela)
+
         while not C.atEnd:
             C.next()
             move_num += 1
             this_move = add_moves_to_leela(C, leela)
-            current_player = leela.whose_turn()
+            current_player = leela.whoseturn()
             prev_player = "white" if current_player == "black" else "black"
+
             if ((args.analyze_start <= move_num <= args.analyze_end) or
                     (move_num in comment_requests_analyze) or
                     ((move_num - 1) in comment_requests_analyze) or
@@ -511,19 +539,21 @@ if __name__ == '__main__':
 
                 if 'winrate' in stats and stats['visits'] > 100:
                     collected_winrates[move_num] = (current_player, stats['winrate'])
+
                 if len(move_list) > 0 and 'winrate' in move_list[0]:
                     collected_best_moves[move_num] = move_list[0]['pos']
                     collected_best_move_winrates[move_num] = move_list[0]['winrate']
 
                 delta = 0.0
                 transdelta = 0.0
+
                 if 'winrate' in stats and (move_num - 1) in collected_best_moves:
                     if this_move != collected_best_moves[move_num - 1]:
                         delta = stats['winrate'] - collected_best_move_winrates[move_num - 1]
-                        delta = min(0.0, (-delta if leela.whose_turn() == "black" else delta))
-                        transdelta = transform_winrate(stats['winrate']) - transform_winrate(
-                            collected_best_move_winrates[move_num - 1])
-                        transdelta = min(0.0, (-transdelta if leela.whose_turn() == "black" else transdelta))
+                        delta = min(0.0, (-delta if leela.whoseturn() == "black" else delta))
+                        transdelta = transform_winrate(stats['winrate']) - \
+                                     transform_winrate(collected_best_move_winrates[move_num - 1])
+                        transdelta = min(0.0, (-transdelta if leela.whoseturn() == "black" else transdelta))
 
                     if transdelta <= -analyze_threshold:
                         (delta_comment, delta_lb_values) = annotations.format_delta_info(delta, transdelta, stats,
@@ -534,15 +564,21 @@ if __name__ == '__main__':
                     if not (args.skip_white and prev_player == "white") and not (
                                 args.skip_black and prev_player == "black"):
                         needs_variations[move_num - 1] = (prev_stats, prev_move_list)
+
                         if (move_num - 1) not in comment_requests_variations:
                             variations_tasks += 1
+
                 next_game_move = None
+
                 if not C.atEnd:
                     C.next()
+
                     if 'W' in C.node.keys():
                         next_game_move = C.node['W'].data[0]
+
                     if 'B' in C.node.keys():
                         next_game_move = C.node['B'].data[0]
+
                     C.previous()
 
                 annotations.annotate_sgf(C, annotations.format_winrate(stats, move_list, board_size, next_game_move),
@@ -562,9 +598,10 @@ if __name__ == '__main__':
                 prev_stats = stats
                 prev_move_list = move_list
                 has_prev = True
-
                 analyze_tasks_initial_done += 1
+
                 refresh_pb()
+
             else:
                 prev_stats = {}
                 prev_move_list = []
@@ -578,6 +615,7 @@ if __name__ == '__main__':
         C = sgf.cursor()
         leela.start()
         add_moves_to_leela(C, leela)
+
         while not C.atEnd:
             C.next()
             move_num += 1
@@ -585,24 +623,28 @@ if __name__ == '__main__':
 
             if move_num not in needs_variations:
                 continue
+
             stats, move_list = needs_variations[move_num]
             next_game_move = None
+
             if not C.atEnd:
                 C.next()
+
                 if 'W' in C.node.keys():
                     next_game_move = C.node['W'].data[0]
+
                 if 'B' in C.node.keys():
                     next_game_move = C.node['B'].data[0]
+
                 C.previous()
 
             do_variations(C, leela, stats, move_list, args.nodes_per_variation, board_size, next_game_move, base_dir,
                           args.verbosity)
             variations_tasks_done += 1
             refresh_pb()
-
     except:
         traceback.print_exc()
-        print("Failure, reporting partial results...\n", end="\n", file=sys.stderr)
+        print("Failure, reporting partial results...", file=sys.stderr)
     finally:
         leela.stop()
 
@@ -610,4 +652,4 @@ if __name__ == '__main__':
         graph_winrates(collected_winrates, "black", args.win_graph)
 
     pb.finish()
-    # print(sgf)
+    print(sgf)

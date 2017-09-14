@@ -120,7 +120,7 @@ class CLI(object):
     def history_hash(self):
         h = hashlib.md5()
         for cmd in self.history:
-            _, c, p = cmd.decode().split()
+            _, c, p = cmd.split()
             h.update(bytes((c[0] + p), 'utf-8'))
         return h.hexdigest()
 
@@ -165,12 +165,14 @@ class CLI(object):
     def drain(self):
         # Drain all remaining stdout and stderr current contents
         so = self.stdout_thread.read_all_lines()
+        # print(so)
         se = self.stderr_thread.read_all_lines()
+        # print(se)
         return so, se
 
     def send_command(self, cmd, expected_success_count=1, drain=True, timeout=20):
         self.p.stdin.write(cmd + "\n")
-        # time.sleep(1)
+        time.sleep(1)
         self.p.stdin.flush()
         sleep_per_try = 0.1
         tries = 0
@@ -254,6 +256,7 @@ class CLI(object):
     def goto_position(self):
         count = len(self.history)
         cmd = "\n".join(self.history)
+        # print(cmd)
         self.send_command(cmd, expected_success_count=count)
 
     def analyze(self):
@@ -267,7 +270,10 @@ class CLI(object):
         self.send_command('time_left white %d 1' % self.seconds_per_search)
 
         cmd = "genmove %s\n" % self.whoseturn()
+        # print(cmd)
         p.stdin.write(cmd)
+        time.sleep(1)
+        p.stdin.flush()
 
         updated = 0
         stderr = []
@@ -291,17 +297,19 @@ class CLI(object):
 
         p.stdin.write("\n")
         time.sleep(1)
+        p.stdin.flush()
+
         o, l = self.drain()
         stdout.extend(o)
         stderr.extend(l)
 
         stats, move_list = self.parse(stdout, stderr)
         if self.verbosity > 0:
-            print("Chosen move: %s" % (stats['chosen']), file=sys.stderr)
+            print("Chosen move: %s" % stats['chosen'], file=sys.stderr)
             if 'best' in stats:
-                print("Best move: %s" % (stats['best']), file=sys.stderr)
-                print("Winrate: %f" % (stats['winrate']), file=sys.stderr)
-                print("Visits: %d" % (stats['visits']), file=sys.stderr)
+                print("Best move: %s" % stats['best'], file=sys.stderr)
+                print("Winrate: %f" % stats['winrate'], file=sys.stderr)
+                print("Visits: %d" % stats['visits'], file=sys.stderr)
 
         return stats, move_list
 
@@ -384,19 +392,21 @@ class CLI(object):
 
             if finished and not summarized:
                 m = re.match(best_regex, line)
+
                 if m is not None:
                     stats['best'] = self.parse_position(m.group(3).split()[0])
                     stats['winrate'] = maybe_flip(self.to_fraction(m.group(2)))
 
                 m = re.match(stats_regex, line)
+
                 if m is not None:
                     stats['visits'] = int(m.group(1))
                     summarized = True
 
         m = re.search(finished_regex, "".join(stdout))
+
         if m is not None:
-            if m.group(1) == "resign":
-                stats['chosen'] = "resign" if m.group(1) == "resign" else self.parse_position(m.group(1))
+            stats['chosen'] = "resign" if m.group(1) == "resign" else self.parse_position(m.group(1))
 
         if 'bookmoves' in stats and len(move_list) == 0:
             move_list.append({'pos': stats['chosen'], 'is_book': True})

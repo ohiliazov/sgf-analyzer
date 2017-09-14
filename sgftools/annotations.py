@@ -14,7 +14,7 @@ def insert_sequence(cursor, seq, data=None, callback=None):
         else:
             color = 'B'
 
-        n_node.add_property(Property(n_node, color, [move]))
+        n_node.add_property(Property(color, [move]))
         cursor.append_node(n_node)
         cursor.next(len(cursor.children) - 1)
 
@@ -119,13 +119,13 @@ def annotate_sgf(cursor, comment, LB_values, TR_values):
     if c_node.has_key('C'):
         c_node['C'].data[0] += comment
     else:
-        c_node.add_property(Property(c_node, 'C', [comment]))
+        c_node.add_property(Property('C', [comment]))
 
     if len(LB_values) > 0:
-        c_node.add_property(Property(c_node, 'LB', LB_values))
+        c_node.add_property(Property('LB', LB_values))
 
     if len(TR_values) > 0:
-        c_node.add_property(Property(c_node, 'TR', TR_values))
+        c_node.add_property(Property('TR', TR_values))
 
 
 def self_test_1():
