@@ -257,7 +257,7 @@ def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, g
             C.next(found_child_idx)
         else:
             nnode = sgflib.Node()
-            nnode.add_property(sgflib.Property(nnode, clr, [mv]))
+            nnode.add_property(sgflib.Property(clr, [mv]))
             C.append_node(nnode)
             C.next(len(C.children) - 1)
 
@@ -292,11 +292,11 @@ def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, g
                     c = node["color"]
                     num_to_show = min(len(pv), max(1, len(pv) * 2 / 3 - 1))
 
-                    for k in range(num_to_show):
+                    for k in range(int(num_to_show)):
                         advance(C, c, pv[k])
                         c = 'black' if c == 'white' else 'white'
 
-                    for k in range(num_to_show):
+                    for k in range(int(num_to_show)):
                         C.previous()
 
     record(tree)

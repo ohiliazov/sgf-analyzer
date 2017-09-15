@@ -311,7 +311,7 @@ class Cursor:
     def append_node(self, node):
         if self.index + 1 < len(self.game_tree) or self.game_tree.variations:
             var = GameTree([node])
-            self.game_tree.appendTree(var, self.index)
+            self.game_tree.append_tree(var, self.index)
             self._set_children()
             self._set_flags()
         else:
