@@ -11,6 +11,11 @@ import matplotlib.pyplot as plt
 DEFAULT_STDEV = 0.22
 RESTART_COUNT = 1
 
+def write_to_file(file, mode, content):
+    with open(file, mode) as f:
+        f.write(str(content))
+
+
 
 def graph_winrates(winrates, color, outp_fn):
     mpl.use('Agg')
@@ -537,6 +542,7 @@ if __name__ == '__main__':
         leela.start()
         add_moves_to_leela(C, leela)
 
+        # analyze main line, without variations
         while not C.atEnd:
             C.next()
             move_num += 1
@@ -614,7 +620,12 @@ if __name__ == '__main__':
                 has_prev = True
                 analyze_tasks_initial_done += 1
 
+                # save to file results with analyzing main line
+                write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
+
                 refresh_pb()
+
+                # until now analyze of main line, without sub-variations
 
             else:
                 prev_stats = {}
@@ -624,7 +635,7 @@ if __name__ == '__main__':
         leela.stop()
         leela.clear_history()
 
-        # Now fill in variations for everything we need
+        # Now fill in variations for everything we need (suggested variations)
         move_num = -1
         C = sgf.cursor()
         leela.start()
@@ -654,6 +665,10 @@ if __name__ == '__main__':
 
             do_variations(C, leela, stats, move_list, board_size, next_game_move, base_dir, args)
             variations_tasks_done += 1
+
+            # save to file results with analyzing variations
+            write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
+
             refresh_pb()
     except:
         traceback.print_exc()
@@ -666,7 +681,7 @@ if __name__ == '__main__':
 
     pb.finish()
 
-    with open(args.SGF_FILE_SAVE_TO, 'w') as f:
-        f.write(str(sgf))
+    # Save final results into file
+    write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
 
     print(sgf)
