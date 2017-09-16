@@ -41,14 +41,17 @@ an hour or two to run.
 Run the script with --help to see other options you can configure. You can change the amount of time Leela will analyze for, change how
 much effort it puts in to making variations versus just analyzing the main game, or select just a subrange of the game to analyze.
 
-TODO list:
+
+### TODO list:
 
    - [ ] clean-up suggested variations with low visits rate
    - [ ] mark by A-B alternatives which has low difference
    - [ ] support Ray bot
    - [ ] code refactoring 
    - [ ] add documentation
-   - [ ] update pdf graph output to have better look
+   - [х] update pdf graph output to have better look
+
+___
 
 ### Troubleshooting
 

@@ -7,6 +7,7 @@ import math
 from sgftools import gotools, leela, annotations, progressbar, sgflib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
 DEFAULT_STDEV = 0.22
 RESTART_COUNT = 1
@@ -26,18 +27,33 @@ def graph_winrates(winrates, color, outp_fn):
     for move_num in sorted(winrates.keys()):
         pl, wr = winrates[move_num]
 
-        if pl != color:
-            wr = 1.0 - wr
         x.append(move_num)
         y.append(wr)
 
     plt.figure(1)
-    plt.axhline(0.5, 0, max(winrates.keys()), linestyle='--', color='0.7')
-    plt.plot(x, y, color='k', marker='+')
+
+    # fill graph with horizontal coordinate lines, step 0.25
+    for xc in np.arange(0.2, 0.8, 0.025):
+        plt.axhline(xc, 0, max(winrates.keys()), linewidth=0.04, color='0.7')
+
+    # add single central horizontal line
+    plt.axhline(0.50, 0, max(winrates.keys()), linewidth=0.3, color='0.2')
+
+    # main graph of win rate changes
+    plt.plot(x, y, color='#ff0000', marker='.', markersize=2.5, linewidth=0.6)
+
+    # set range limits for x and y axes
     plt.xlim(0, max(winrates.keys()))
-    plt.ylim(0, 1)
-    plt.xlabel("Move Number", fontsize=28)
-    plt.ylabel("Win Rate", fontsize=28)
+    plt.ylim(0.2, 0.8)
+
+    # set size of numbers on axes
+    plt.yticks(np.arange(0.2, 0.8, 0.05),fontsize=6)
+    plt.yticks(fontsize=6)
+
+    # add labels to axes
+    plt.xlabel("Move Number", fontsize=12)
+    plt.ylabel("Win Rate", fontsize=14)
+
     plt.savefig(outp_fn, dpi=200, format='pdf', bbox_inches='tight')
 
 
