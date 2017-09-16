@@ -178,7 +178,11 @@ def do_analyze(leela, base_dir, verbosity):
 
 # move_list is from a call to do_analyze
 # Iteratively expands a tree of moves by expanding on the leaf with the highest "probability of reaching".
-def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, game_move, base_dir, verbosity):
+def do_variations(C, leela, stats, move_list, board_size, game_move, base_dir, args):
+
+    nodes_per_variation = args.nodes_per_variation
+    verbosity = args.verbosity
+
     if 'bookmoves' in stats or len(move_list) <= 0:
         return None
 
@@ -292,6 +296,9 @@ def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, g
                     c = node["color"]
                     num_to_show = min(len(pv), max(1, len(pv) * 2 / 3 - 1))
 
+                    if args.num_to_show is not None:
+                        num_to_show = args.num_to_show
+
                     for k in range(int(num_to_show)):
                         advance(C, c, pv[k])
                         c = 'black' if c == 'white' else 'white'
@@ -351,6 +358,10 @@ if __name__ == '__main__':
                         help="How many seconds to use per search (default=10)")
     parser.add_argument('--nodes-per-var', dest='nodes_per_variation', default=8, type=int, metavar="N",
                         help="How many nodes to explore with leela in each variation tree (default=8)")
+
+    parser.add_argument('--num_to_show', dest='num_to_show', default=2, type=int,
+                        help="Number of moves to show from the sequence of suggested moves (default=2)")
+
     parser.add_argument('--win-graph', dest='win_graph', metavar="PDF",
                         help="Output pdf graph of win rate to this file, must have matplotlib installed")
     parser.add_argument('-v', '--verbosity', default=0, type=int, metavar="V",
@@ -367,7 +378,10 @@ if __name__ == '__main__':
                         help="Do not display analysis or explore variations for white mistakes")
     parser.add_argument('--skip-black', dest='skip_black', action='store_true',
                         help="Do not display analysis or explore variations for black mistakes")
+
     parser.add_argument("SGF_FILE", help="SGF file to analyze")
+    parser.add_argument("SGF_FILE_SAVE_TO", help="SGF file to save results of analyze")
+
 
     args = parser.parse_args()
     sgf_fn = args.SGF_FILE
@@ -638,8 +652,7 @@ if __name__ == '__main__':
 
                 C.previous()
 
-            do_variations(C, leela, stats, move_list, args.nodes_per_variation, board_size, next_game_move, base_dir,
-                          args.verbosity)
+            do_variations(C, leela, stats, move_list, board_size, next_game_move, base_dir, args)
             variations_tasks_done += 1
             refresh_pb()
     except:
@@ -652,4 +665,8 @@ if __name__ == '__main__':
         graph_winrates(collected_winrates, "black", args.win_graph)
 
     pb.finish()
+
+    with open(args.SGF_FILE_SAVE_TO, 'w') as f:
+        f.write(str(sgf))
+
     print(sgf)

@@ -1,6 +1,6 @@
 import sys
 import datetime
-
+import time
 
 class ProgressBar(object):
     def __init__(self, min_value=0, max_value=100, width=50, frequency=1, stream=sys.stderr):
@@ -91,7 +91,7 @@ class ProgressBar(object):
         self.stream.write(
             "\r|%s| 100.00%% | Done. | Elapsed Time: %s                                             \n" % (
                 bar_str, time_remaining))
-
+        time.sleep(0.5)
 
 def self_test_1():
     pb = ProgressBar(0, 100, 50, 1)
