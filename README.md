@@ -40,7 +40,7 @@ an hour or two to run.
 
 Run the script with --help to see other options you can configure. You can change the amount of time Leela will analyze for, change how
 much effort it puts in to making variations versus just analyzing the main game, or select just a subrange of the game to analyze.
-
+___
 
 ### TODO list:
 
@@ -49,7 +49,12 @@ much effort it puts in to making variations versus just analyzing the main game,
    - [ ] support Ray bot
    - [ ] code refactoring 
    - [ ] add documentation
+   - [ ] tune performance between leela calls
+   - [ ] support/clean-up non english characters (bug)
    - [х] update pdf graph output to have better look
+   - [х] write to file during analysis
+   - [х] write to file with Python 3 instead of console
+   - [х] add limitation to show suggested moves
 
 ___
 

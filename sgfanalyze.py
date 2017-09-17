@@ -1,13 +1,17 @@
-import os, sys
+import os
+import sys
 import argparse
 import hashlib
 import pickle
 import traceback
 import math
-from sgftools import gotools, leela, annotations, progressbar, sgflib
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+
+from sgftools import gotools, leela, annotations, progressbar, sgflib
+
 
 DEFAULT_STDEV = 0.22
 RESTART_COUNT = 1
@@ -33,7 +37,7 @@ def graph_winrates(winrates, color, outp_fn):
     plt.figure(1)
 
     # fill graph with horizontal coordinate lines, step 0.25
-    for xc in np.arange(0.2, 0.8, 0.025):
+    for xc in np.arange(0, 1, 0.025):
         plt.axhline(xc, 0, max(winrates.keys()), linewidth=0.04, color='0.7')
 
     # add single central horizontal line
@@ -44,7 +48,7 @@ def graph_winrates(winrates, color, outp_fn):
 
     # set range limits for x and y axes
     plt.xlim(0, max(winrates.keys()))
-    plt.ylim(0.2, 0.8)
+    plt.ylim(0, 1)
 
     # set size of numbers on axes
     plt.yticks(np.arange(0.2, 0.8, 0.05),fontsize=6)
@@ -477,11 +481,13 @@ if __name__ == '__main__':
         handicap_stone_count = int(C.node['HA'].data[0])
 
     is_japanese_rules = False
+    komi = 7.5
+
     if 'RU' in C.node.keys():
         rules = C.node['RU'].data[0].lower()
         is_japanese_rules = (rules == 'jp' or rules == 'japanese' or rules == 'japan')
+        komi = 6.5
 
-    komi = 7.5
     if 'KM' in C.node.keys():
         komi = float(C.node['KM'].data[0])
 
