@@ -51,10 +51,10 @@ ___
    - [ ] add documentation
    - [ ] tune performance between leela calls
    - [ ] support/clean-up non english characters (bug)
-   - [х] update pdf graph output to have better look
-   - [х] write to file during analysis
-   - [х] write to file with Python 3 instead of console
-   - [х] add limitation to show suggested moves
+   - [x] update pdf graph output to have better look
+   - [x] write to file during analysis
+   - [x] write to file with Python 3 instead of console
+   - [x] add limitation to show suggested moves
 
 ___
 
