@@ -23,8 +23,7 @@ Download or Clone this repository to a local directory:
 Then run the script to analyze a game, providing the command with arguments:
 - file name of game to analyze 
 - path to GTP version of Leela, such as ./Leela0100GTP.exe or ./leela_0100_linux_x64, etc.
-- other parameters are optional
-
+other parameters are optional
 
     sgfanalyze.py my_game.sgf --leela /PATH/TO/LEELA.exe
 
