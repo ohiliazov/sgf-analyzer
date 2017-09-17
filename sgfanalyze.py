@@ -5,10 +5,12 @@ import hashlib
 import pickle
 import traceback
 import math
+import time
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+
 
 from sgftools import gotools, leela, annotations, progressbar, sgflib
 
@@ -51,12 +53,12 @@ def graph_winrates(winrates, color, outp_fn):
     plt.ylim(0, 1)
 
     # set size of numbers on axes
-    plt.yticks(np.arange(0.2, 0.8, 0.05),fontsize=6)
+    plt.yticks(np.arange(0, 1.05, 0.05),fontsize=6)
     plt.yticks(fontsize=6)
 
     # add labels to axes
-    plt.xlabel("Move Number", fontsize=12)
-    plt.ylabel("Win Rate", fontsize=14)
+    plt.xlabel("Move Number", fontsize=10)
+    plt.ylabel("Win Rate", fontsize=12)
 
     plt.savefig(outp_fn, dpi=200, format='pdf', bbox_inches='tight')
 
@@ -657,6 +659,9 @@ if __name__ == '__main__':
         leela.stop()
         leela.clear_history()
 
+        if args.win_graph:
+            graph_winrates(collected_winrates, "black", args.win_graph)
+
         # Now fill in variations for everything we need (suggested variations)
         move_num = -1
         C = sgf.cursor()
@@ -698,12 +703,13 @@ if __name__ == '__main__':
     finally:
         leela.stop()
 
-    if args.win_graph:
-        graph_winrates(collected_winrates, "black", args.win_graph)
-
     pb.finish()
 
     # Save final results into file
     write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
 
     print(sgf)
+
+    # delay in case of sequential running of several analysis
+    time.sleep(1)
+
