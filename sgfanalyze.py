@@ -23,8 +23,7 @@ def write_to_file(file, mode, content):
         f.write(str(content))
 
 
-
-def graph_winrates(winrates, color, outp_fn):
+def graph_winrates(winrates, file_to_save):
     mpl.use('Agg')
 
     x = []
@@ -60,7 +59,9 @@ def graph_winrates(winrates, color, outp_fn):
     plt.xlabel("Move Number", fontsize=10)
     plt.ylabel("Win Rate", fontsize=12)
 
-    plt.savefig(outp_fn, dpi=200, format='pdf', bbox_inches='tight')
+    # in this script for pdf it use the same file name as provided sgf file to avoid extra parameters
+    file_name = file_to_save.split('.')[0] + '_graph.pdf'
+    plt.savefig(file_name, dpi=200, format='pdf', bbox_inches='tight')
 
 
 def add_moves_to_leela(C, leela):
@@ -369,12 +370,17 @@ default_analyze_thresh = 0.030
 default_var_thresh = 0.030
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser()
     required = parser.add_argument_group('required named arguments')
-    parser.add_argument('--start', dest='analyze_start', default=0, type=int, metavar="MOVENUM",
-                        help="Analyze game starting at this move (default=0)")
-    parser.add_argument('--stop', dest='analyze_end', default=1000, type=int, metavar="MOVENUM",
-                        help="Analyze game stopping at this move (default=1000)")
+
+    parser.add_argument("SGF_FILE", help="SGF file to analyze")
+    parser.add_argument("--save_to_file", dest='save_to_file',
+                        help="File to save results of analyze, if skipped - use source filename with adding 'analyzed'")
+
+    required.add_argument('--leela', dest='executable', required=True, metavar="CMD",
+                          help="Command to run Leela executable")
+
     parser.add_argument('--analyze-thresh', dest='analyze_threshold', default=default_analyze_thresh, type=float,
                         metavar="T",
                         help="Display analysis on moves losing approx at least this much win rate when the game is close (default=0.03)")
@@ -385,33 +391,39 @@ if __name__ == '__main__':
                         help="How many seconds to use per search (default=10)")
     parser.add_argument('--nodes-per-var', dest='nodes_per_variation', default=8, type=int, metavar="N",
                         help="How many nodes to explore with leela in each variation tree (default=8)")
-
     parser.add_argument('--num_to_show', dest='num_to_show', default=2, type=int,
                         help="Number of moves to show from the sequence of suggested moves (default=2)")
 
-    parser.add_argument('--win-graph', dest='win_graph', metavar="PDF",
-                        help="Output pdf graph of win rate to this file, must have matplotlib installed")
+    parser.add_argument('--win-graph', dest='win_graph', action='store_true',
+                        help="Build pdf graph of win rate, must have matplotlib installed")
+    parser.add_argument('--wipe-comments', dest='wipe_comments', action='store_true',
+                        help="Remove existing comments from the main line of the SGF file")
+
+    parser.add_argument('--start', dest='analyze_start', default=0, type=int, metavar="MOVENUM",
+                        help="Analyze game starting at this move (default=0)")
+    parser.add_argument('--stop', dest='analyze_end', default=1000, type=int, metavar="MOVENUM",
+                        help="Analyze game stopping at this move (default=1000)")
+
     parser.add_argument('-v', '--verbosity', default=0, type=int, metavar="V",
                         help="Set the verbosity level, 0: progress only, 1: progress+status, 2: progress+status+state")
-    required.add_argument('--leela', dest='executable', required=True, metavar="CMD",
-                          help="Command to run Leela executable")
+
     parser.add_argument('--cache', dest='ckpt_dir', metavar="DIR", default=os.path.expanduser('~/.leela_checkpoints'),
                         help="Set a directory to cache partially complete analyses, default ~/.leela_checkpoints")
     parser.add_argument('--restarts', default=2, type=int, metavar="N",
                         help="If leela crashes, retry the analysis step this many times before reporting a failure")
-    parser.add_argument('--wipe-comments', dest='wipe_comments', action='store_true',
-                        help="Remove existing comments from the main line of the SGF file")
+
     parser.add_argument('--skip-white', dest='skip_white', action='store_true',
                         help="Do not display analysis or explore variations for white mistakes")
     parser.add_argument('--skip-black', dest='skip_black', action='store_true',
                         help="Do not display analysis or explore variations for black mistakes")
 
-    parser.add_argument("SGF_FILE", help="SGF file to analyze")
-    parser.add_argument("SGF_FILE_SAVE_TO", help="SGF file to save results of analyze")
-
 
     args = parser.parse_args()
     sgf_fn = args.SGF_FILE
+
+    # if no file name to save analyze results provided - it will use original source file with concat 'analyzed'
+    if not args.save_to_file:
+        args.save_to_file = args.SGF_FILE.split('.')[0] + '_analyzed.sgf'
 
     if not os.path.exists(sgf_fn):
         parser.error("No such file: %s" % (sgf_fn))
@@ -645,7 +657,7 @@ if __name__ == '__main__':
                 analyze_tasks_initial_done += 1
 
                 # save to file results with analyzing main line
-                write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
+                write_to_file(args.save_to_file, 'w', sgf)
 
                 refresh_pb()
 
@@ -660,7 +672,7 @@ if __name__ == '__main__':
         leela.clear_history()
 
         if args.win_graph:
-            graph_winrates(collected_winrates, "black", args.win_graph)
+            graph_winrates(collected_winrates, args.SGF_FILE)
 
         # Now fill in variations for everything we need (suggested variations)
         move_num = -1
@@ -694,7 +706,7 @@ if __name__ == '__main__':
             variations_tasks_done += 1
 
             # save to file results with analyzing variations
-            write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
+            write_to_file(args.save_to_file, 'w', sgf)
 
             refresh_pb()
     except:
@@ -706,7 +718,7 @@ if __name__ == '__main__':
     pb.finish()
 
     # Save final results into file
-    write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
+    write_to_file(args.save_to_file, 'w', sgf)
 
     print(sgf)
 
