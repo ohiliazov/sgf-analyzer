@@ -7,9 +7,15 @@ import math
 from sgftools import gotools, leela, annotations, progressbar, sgflib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
 DEFAULT_STDEV = 0.22
 RESTART_COUNT = 1
+
+def write_to_file(file, mode, content):
+    with open(file, mode) as f:
+        f.write(str(content))
+
 
 
 def graph_winrates(winrates, color, outp_fn):
@@ -21,18 +27,33 @@ def graph_winrates(winrates, color, outp_fn):
     for move_num in sorted(winrates.keys()):
         pl, wr = winrates[move_num]
 
-        if pl != color:
-            wr = 1.0 - wr
         x.append(move_num)
         y.append(wr)
 
     plt.figure(1)
-    plt.axhline(0.5, 0, max(winrates.keys()), linestyle='--', color='0.7')
-    plt.plot(x, y, color='k', marker='+')
+
+    # fill graph with horizontal coordinate lines, step 0.25
+    for xc in np.arange(0.2, 0.8, 0.025):
+        plt.axhline(xc, 0, max(winrates.keys()), linewidth=0.04, color='0.7')
+
+    # add single central horizontal line
+    plt.axhline(0.50, 0, max(winrates.keys()), linewidth=0.3, color='0.2')
+
+    # main graph of win rate changes
+    plt.plot(x, y, color='#ff0000', marker='.', markersize=2.5, linewidth=0.6)
+
+    # set range limits for x and y axes
     plt.xlim(0, max(winrates.keys()))
-    plt.ylim(0, 1)
-    plt.xlabel("Move Number", fontsize=28)
-    plt.ylabel("Win Rate", fontsize=28)
+    plt.ylim(0.2, 0.8)
+
+    # set size of numbers on axes
+    plt.yticks(np.arange(0.2, 0.8, 0.05),fontsize=6)
+    plt.yticks(fontsize=6)
+
+    # add labels to axes
+    plt.xlabel("Move Number", fontsize=12)
+    plt.ylabel("Win Rate", fontsize=14)
+
     plt.savefig(outp_fn, dpi=200, format='pdf', bbox_inches='tight')
 
 
@@ -178,7 +199,11 @@ def do_analyze(leela, base_dir, verbosity):
 
 # move_list is from a call to do_analyze
 # Iteratively expands a tree of moves by expanding on the leaf with the highest "probability of reaching".
-def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, game_move, base_dir, verbosity):
+def do_variations(C, leela, stats, move_list, board_size, game_move, base_dir, args):
+
+    nodes_per_variation = args.nodes_per_variation
+    verbosity = args.verbosity
+
     if 'bookmoves' in stats or len(move_list) <= 0:
         return None
 
@@ -292,6 +317,9 @@ def do_variations(C, leela, stats, move_list, nodes_per_variation, board_size, g
                     c = node["color"]
                     num_to_show = min(len(pv), max(1, len(pv) * 2 / 3 - 1))
 
+                    if args.num_to_show is not None:
+                        num_to_show = args.num_to_show
+
                     for k in range(int(num_to_show)):
                         advance(C, c, pv[k])
                         c = 'black' if c == 'white' else 'white'
@@ -351,6 +379,10 @@ if __name__ == '__main__':
                         help="How many seconds to use per search (default=10)")
     parser.add_argument('--nodes-per-var', dest='nodes_per_variation', default=8, type=int, metavar="N",
                         help="How many nodes to explore with leela in each variation tree (default=8)")
+
+    parser.add_argument('--num_to_show', dest='num_to_show', default=2, type=int,
+                        help="Number of moves to show from the sequence of suggested moves (default=2)")
+
     parser.add_argument('--win-graph', dest='win_graph', metavar="PDF",
                         help="Output pdf graph of win rate to this file, must have matplotlib installed")
     parser.add_argument('-v', '--verbosity', default=0, type=int, metavar="V",
@@ -367,7 +399,10 @@ if __name__ == '__main__':
                         help="Do not display analysis or explore variations for white mistakes")
     parser.add_argument('--skip-black', dest='skip_black', action='store_true',
                         help="Do not display analysis or explore variations for black mistakes")
+
     parser.add_argument("SGF_FILE", help="SGF file to analyze")
+    parser.add_argument("SGF_FILE_SAVE_TO", help="SGF file to save results of analyze")
+
 
     args = parser.parse_args()
     sgf_fn = args.SGF_FILE
@@ -523,6 +558,7 @@ if __name__ == '__main__':
         leela.start()
         add_moves_to_leela(C, leela)
 
+        # analyze main line, without variations
         while not C.atEnd:
             C.next()
             move_num += 1
@@ -600,7 +636,12 @@ if __name__ == '__main__':
                 has_prev = True
                 analyze_tasks_initial_done += 1
 
+                # save to file results with analyzing main line
+                write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
+
                 refresh_pb()
+
+                # until now analyze of main line, without sub-variations
 
             else:
                 prev_stats = {}
@@ -610,7 +651,7 @@ if __name__ == '__main__':
         leela.stop()
         leela.clear_history()
 
-        # Now fill in variations for everything we need
+        # Now fill in variations for everything we need (suggested variations)
         move_num = -1
         C = sgf.cursor()
         leela.start()
@@ -638,9 +679,12 @@ if __name__ == '__main__':
 
                 C.previous()
 
-            do_variations(C, leela, stats, move_list, args.nodes_per_variation, board_size, next_game_move, base_dir,
-                          args.verbosity)
+            do_variations(C, leela, stats, move_list, board_size, next_game_move, base_dir, args)
             variations_tasks_done += 1
+
+            # save to file results with analyzing variations
+            write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
+
             refresh_pb()
     except:
         traceback.print_exc()
@@ -652,4 +696,8 @@ if __name__ == '__main__':
         graph_winrates(collected_winrates, "black", args.win_graph)
 
     pb.finish()
+
+    # Save final results into file
+    write_to_file(args.SGF_FILE_SAVE_TO, 'w', sgf)
+
     print(sgf)
