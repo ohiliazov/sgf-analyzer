@@ -172,7 +172,6 @@ class CLI(object):
 
     def send_command(self, cmd, expected_success_count=1, drain=True, timeout=20):
         self.p.stdin.write(cmd + "\n")
-        time.sleep(1)
         self.p.stdin.flush()
         sleep_per_try = 0.1
         tries = 0
@@ -272,7 +271,6 @@ class CLI(object):
         cmd = "genmove %s\n" % self.whoseturn()
         # print(cmd)
         p.stdin.write(cmd)
-        time.sleep(1)
         p.stdin.flush()
 
         updated = 0
