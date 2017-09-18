@@ -391,8 +391,8 @@ if __name__ == '__main__':
                         help="How many seconds to use per search (default=10)")
     parser.add_argument('--nodes-per-var', dest='nodes_per_variation', default=8, type=int, metavar="N",
                         help="How many nodes to explore with leela in each variation tree (default=8)")
-    parser.add_argument('--num_to_show', dest='num_to_show', default=2, type=int,
-                        help="Number of moves to show from the sequence of suggested moves (default=2)")
+    parser.add_argument('--num_to_show', dest='num_to_show', default=0, type=int,
+                        help="Number of moves to show from the sequence of suggested moves (default=0)")
 
     parser.add_argument('--win-graph', dest='win_graph', action='store_true',
                         help="Build pdf graph of win rate, must have matplotlib installed")
@@ -510,6 +510,10 @@ if __name__ == '__main__':
             komi = old_komi + handicap_stone_count
             print("Adjusting komi from %f to %f in converting Japanese rules with %d handicap to Chinese rules" % (
                 old_komi, komi, handicap_stone_count), file=sys.stderr)
+
+        # fix issue when komi is not set in given sgf, for example from Fox server
+        if komi == 0 and not is_handicap_game:
+            komi = 6.5
 
     else:
         if is_handicap_game:
