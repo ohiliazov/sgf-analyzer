@@ -19,7 +19,7 @@ DEFAULT_STDEV = 0.22
 RESTART_COUNT = 1
 
 def write_to_file(file, mode, content):
-    with open(file, mode) as f:
+    with open(file, mode, encoding='utf-8') as f:
         f.write(str(content))
 
 
