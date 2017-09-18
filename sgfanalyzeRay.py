@@ -221,10 +221,7 @@ if __name__ == '__main__':
             komi = 0.5
         print("Warning: Komi not specified, assuming %f" % komi, file=sys.stderr)
 
-    ray = ray.CLI(board_size=board_size,
-                      executable=args.executable,
-                      is_handicap_game=is_handicap_game,
-                      komi=komi,
+    ray = ray.CLI(executable=args.executable,
                       seconds_per_search=args.seconds_per_search,
                       verbosity=args.verbosity)
 
@@ -251,32 +248,23 @@ if __name__ == '__main__':
             current_player = ray.whoseturn()
             prev_player = "white" if current_player == "black" else "black"
 
-            if ((args.analyze_start <= move_num <= args.analyze_end) or
-                    (move_num in comment_requests_analyze) or
-                    ((move_num - 1) in comment_requests_analyze) or
-                    (move_num in comment_requests_variations) or
-                    ((move_num - 1) in comment_requests_variations)):
 
-                stats, move_list = do_analyze(ray, base_dir, args.verbosity)
+            stats, move_list = do_analyze(ray, base_dir, args.verbosity)
 
-                if 'winrate' in stats and stats['visits'] > 100:
-                    collected_winrates[move_num] = (current_player, stats['winrate'])
+            if 'winrate' in stats and stats['visits'] > 100:
+                collected_winrates[move_num] = (current_player, stats['winrate'])
 
-                if len(move_list) > 0 and 'winrate' in move_list[0]:
-                    collected_best_moves[move_num] = move_list[0]['pos']
-                    collected_best_move_winrates[move_num] = move_list[0]['winrate']
+            if len(move_list) > 0 and 'winrate' in move_list[0]:
+                collected_best_moves[move_num] = move_list[0]['pos']
+                collected_best_move_winrates[move_num] = move_list[0]['winrate']
 
-                delta = 0.0
-                transdelta = 0.0
+            delta = 0.0
+            transdelta = 0.0
 
-                next_game_move = None
+            next_game_move = None
 
-                # until now analyze of main line, without sub-variations
 
-            else:
-                prev_stats = {}
-                prev_move_list = []
-                has_prev = False
+
 
             ray.stop()
             ray.clear_history()

@@ -2,83 +2,22 @@ import sys
 import re
 import time
 import hashlib
-from queue import Queue, Empty
-from threading import Thread
+
 from subprocess import Popen, PIPE  # STDOUT
 
-update_regex = r'Nodes: ([0-9]+), ' \
-               r'Win: ([0-9]+\.[0-9]+)\% \(MC:[0-9]+\.[0-9]+\%\/VN:[0-9]+\.[0-9]+\%\), ' \
-               r'PV:(( [A-Z][0-9]+)+)'
+from sgftools.ReaderThread import start_reader_thread
+from sgftools.regex_collection import update_regex, update_regex_no_vn
 
-update_regex_no_vn = r'Nodes: ([0-9]+), ' \
-                     r'Win: ([0-9]+\.[0-9]+)\%, ' \
-                     r'PV:(( [A-Z][0-9]+)+)'
-
-
-# Start a thread that perpetually reads from the given file descriptor
-# and pushes the result on to a queue, to simulate non-blocking io. We
-# could just use fcntl and make the file descriptor non-blocking, but
-# fcntl isn't available on windows so we do this horrible hack.
-class ReaderThread:
-    def __init__(self, fd):
-        self.queue = Queue()
-        self.fd = fd
-        self.stopped = False
-
-    def stop(self):
-        # No lock since this is just a simple bool that only ever changes one way
-        self.stopped = True
-
-    def loop(self):
-        while not self.stopped and not self.fd.closed:
-            line = None
-            # fd.readline() should return due to eof once the process is closed
-            # at which point
-            try:
-                line = self.fd.readline()
-            except IOError:
-                time.sleep(0.2)
-                pass
-            if line is not None and len(line) > 0:
-                self.queue.put(line)
-
-    def readline(self):
-        try:
-            line = self.queue.get_nowait()
-        except Empty:
-            return ""
-        return line
-
-    def read_all_lines(self):
-        lines = []
-        while True:
-            try:
-                line = self.queue.get_nowait()
-            except Empty:
-                break
-            lines.append(line)
-        return lines
-
-
-def start_reader_thread(fd):
-    rt = ReaderThread(fd)
-
-    def begin_loop():
-        rt.loop()
-
-    t = Thread(target=begin_loop)
-    t.start()
-    return rt
 
 
 class CLI(object):
-    def __init__(self, board_size, executable, is_handicap_game, komi, seconds_per_search, verbosity):
+    def __init__(self, executable, seconds_per_search, verbosity):
         self.history = []
         self.executable = executable
         self.verbosity = verbosity
-        self.board_size = board_size
-        self.is_handicap_game = is_handicap_game
-        self.komi = komi
+        self.board_size = 19 #move to config
+        self.is_handicap_game = False # move to config
+        self.komi = 6.5 # move to config
         self.seconds_per_search = seconds_per_search + 1  # add one to account for lag time
         self.p = None
         self.stdout_thread = None
@@ -195,7 +134,7 @@ class CLI(object):
 
         self.stdout_thread = start_reader_thread(p.stdout)
         self.stderr_thread = start_reader_thread(p.stderr)
-        time.sleep(2)
+        time.sleep(1)
 
         if self.verbosity > 0:
             print("Setting board size %d and komi %f to Leela" % (self.board_size, self.komi), file=sys.stderr)
@@ -286,7 +225,6 @@ class CLI(object):
             if len(l) != 0:
                 for element in l:
                     print(element, end='\n')
-
 
 
             d = self.parse_status_update("".join(l))

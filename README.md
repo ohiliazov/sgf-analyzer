@@ -26,7 +26,7 @@ Then run the script to analyze a game, providing the command with arguments:
 * other parameters are optional
 
 
-    sgfanalyze.py my_game.sgf --leela /PATH/TO/LEELA.exe
+     sgfanalyze.py my_game.sgf --leela /PATH/TO/LEELA.exe
 
 Some of available options:
 
