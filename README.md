@@ -20,9 +20,12 @@ Download or Clone this repository to a local directory:
     git clone https://github.com/jumpman24/leela-analysis-36
     cd leela-analysis-36
 
-Then simply run the script to analyze a game, providing the command to run to the leela executable, such as ./Leela0100GTP.exe or ./leela_0100_linux_x64, etc.
+Then run the script to analyze a game, providing the command with arguments:
+* file name of game to analyze 
+* path to GTP version of Leela, such as ./Leela0100GTP.exe or ./leela_0100_linux_x64, etc.
+* other parameters are optional
 
-    sgfanalyze.py my_game.sgf my_game_analyzed.sgf --leela /PATH/TO/LEELA.exe
+      sgfanalyze.py my_game.sgf --leela /PATH/TO/LEELA.exe
 
 Some of available options:
 
@@ -33,6 +36,7 @@ Some of available options:
     --num_to_show     - Number of moves to show in addition to nodes-per-var, 
                         helps to clean-up irrational variations (default=2) 
     --wipe-comments   - Remove existing comments from the main line of the SGF file
+    --win-graph       - Build nice pdf graph of win rate progress, must have matplotlib installed
 
 By default, Leela will go through every position in the provided game and find what it considers to be all the mistakes by both players,
 producing an SGF file where it highlights those mistakes and provides alternative variations it would have expected. It will probably take
@@ -40,7 +44,7 @@ an hour or two to run.
 
 Run the script with --help to see other options you can configure. You can change the amount of time Leela will analyze for, change how
 much effort it puts in to making variations versus just analyzing the main game, or select just a subrange of the game to analyze.
-
+___
 
 ### TODO list:
 
@@ -49,7 +53,14 @@ much effort it puts in to making variations versus just analyzing the main game,
    - [ ] support Ray bot
    - [ ] code refactoring 
    - [ ] add documentation
-   - [х] update pdf graph output to have better look
+   - [ ] tune performance between leela calls
+   - [ ] support/clean-up non english characters (bug)
+   - [ ] show even branches
+   - [ ] add params to stop analysis if win rate drops > ~80%
+   - [x] update pdf graph output to have better look
+   - [x] write to file during analysis
+   - [x] write to file with Python 3 instead of console
+   - [x] add limitation to show suggested moves
 
 ___
 
