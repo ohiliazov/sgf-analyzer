@@ -4,7 +4,7 @@ from sgftools.sgflib import SGFParser, Property, Node
 
 def import_sgf(filename):
     data = ""
-    with open(filename, 'r') as sgf_file:
+    with open(filename, 'r', encoding="utf-8") as sgf_file:
         for line in sgf_file:
             data += line
 
