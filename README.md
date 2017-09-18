@@ -25,7 +25,8 @@ Then run the script to analyze a game, providing the command with arguments:
 * path to GTP version of Leela, such as ./Leela0100GTP.exe or ./leela_0100_linux_x64, etc.
 * other parameters are optional
 
-      sgfanalyze.py my_game.sgf --leela /PATH/TO/LEELA.exe
+
+    sgfanalyze.py my_game.sgf --leela /PATH/TO/LEELA.exe
 
 Some of available options:
 
@@ -34,7 +35,7 @@ Some of available options:
     --analyze-thresh  - Display analysis on moves losing at least this much of win rate (default=0.03)    
     --nodes-per-var   - Number of nodes to explore (depth) in each variation tree (default=8)
     --num_to_show     - Number of moves to show in addition to nodes-per-var, 
-                        helps to clean-up irrational variations (default=2) 
+                        helps to clean-up irrational variations (default=0) 
     --wipe-comments   - Remove existing comments from the main line of the SGF file
     --win-graph       - Build nice pdf graph of win rate progress, must have matplotlib installed
 
