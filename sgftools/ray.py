@@ -97,6 +97,9 @@ class CLI(object):
         return so, se
 
     def send_command(self, cmd, expected_success_count=1, drain=True, timeout=20):
+
+        print('___CMD:' + cmd)
+
         self.p.stdin.write(cmd + "\n")
         time.sleep(1)
         self.p.stdin.flush()
@@ -121,29 +124,31 @@ class CLI(object):
                     break
         raise Exception("Failed to send command '%s' to Leela" % cmd)
 
+
+
     def start(self):
         xargs = []
 
         if self.verbosity > 0:
             print("Starting leela...", file=sys.stderr)
 
-
-        p = Popen(self.executable, stdout=PIPE, stdin=PIPE, stderr=PIPE,
+        p = Popen([self.executable, '--const-time', '11'], stdout=PIPE, stdin=PIPE, stderr=PIPE,
                   universal_newlines=True)
         self.p = p
 
+        print(str(p.poll()))
+
         self.stdout_thread = start_reader_thread(p.stdout)
         self.stderr_thread = start_reader_thread(p.stderr)
-        time.sleep(1)
+        time.sleep(5)
 
         if self.verbosity > 0:
             print("Setting board size %d and komi %f to Leela" % (self.board_size, self.komi), file=sys.stderr)
 
-        #self.send_command('boardsize %d' % self.board_size)
-        self.send_command('boardsize 19')
 
+        self.send_command('boardsize 19')
         self.send_command('komi %f' % self.komi)
-        self.send_command('time_settings 0 %d 1' % self.seconds_per_search) # --const-time 5
+        self.send_command('time_settings 0 %d 1' % self.seconds_per_search)
 
     def stop(self):
         if self.verbosity > 0:
@@ -243,6 +248,20 @@ class CLI(object):
         o, l = self.drain()
         stdout.extend(o)
         stderr.extend(l)
+
+        # print in console Ray responce
+        if len(o) > 0:
+            print('Ray_111: \n')
+
+            for element in o:
+                print(element, end='\n')
+
+        if len(l) != 0:
+            print('Ray_222: \n')
+
+            for element in l:
+                print(element, end='\n')
+
 
         stats, move_list = self.parse(stdout, stderr)
         if self.verbosity > 0:
