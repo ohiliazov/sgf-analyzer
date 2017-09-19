@@ -4,52 +4,68 @@ from queue import Queue, Empty
 from threading import Thread
 
 
-# Start a thread that perpetually reads from the given file descriptor
-# and pushes the result on to a queue, to simulate non-blocking io. We
-# could just use fcntl and make the file descriptor non-blocking, but
-# fcntl isn't available on windows so we do this horrible hack.
 class ReaderThread:
+    """
+    ReaderThread perpetually reads from the given file descriptor and pushes the result to a queue.
+    """
+
     def __init__(self, fd):
         self.queue = Queue()
-        self.fd = fd
+        self.fd = fd  # stdout or stderr is given
         self.stopped = False
 
     def stop(self):
-        # No lock since this is just a simple bool that only ever changes one way
+        """
+        No lock since this is just a simple bool that only ever changes one way
+        """
         self.stopped = True
 
     def loop(self):
+        """
+        Loop fd.readline() due to EOF until the process is closed
+        """
         while not self.stopped and not self.fd.closed:
-            line = None
-            # fd.readline() should return due to eof once the process is closed
-            # at which point
             try:
                 line = self.fd.readline()
+                if len(line) > 0:
+                    self.queue.put(line)
             except IOError:
                 time.sleep(0.2)
                 pass
-            if line is not None and len(line) > 0:
-                self.queue.put(line)
 
     def readline(self):
+        """
+        Read single line from queue
+        :return: str
+        """
         try:
             line = self.queue.get_nowait()
+            return line
         except Empty:
             return ""
-        return line
 
     def read_all_lines(self):
+        """
+        Read all lines from queue.
+        :return: list
+        """
         lines = []
+
         while True:
             try:
                 line = self.queue.get_nowait()
+                lines.append(line)
             except Empty:
                 break
-            lines.append(line)
+
         return lines
 
-
 def start_reader_thread(fd):
+    """
+    Start file descriptor loop thread
+    :param fd: stdout | stderr
+    :return: ReaderThread
+    """
     rt = ReaderThread(fd)
 
     def begin_loop():
@@ -57,4 +73,5 @@ def start_reader_thread(fd):
 
     t = Thread(target=begin_loop)
     t.start()
+
     return rt
