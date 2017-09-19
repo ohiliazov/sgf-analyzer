@@ -46,7 +46,7 @@ class ReaderThread:
                 if len(line) > 0:
                     self.queue.put(line)
             except IOError:
-                time.sleep(0.1)
+                time.sleep(0.2)
                 pass
 
     def readline(self):
@@ -85,7 +85,11 @@ def start_reader_thread(fd):
     :return: ReaderThread
     """
     rt = ReaderThread(fd)
-    t = Thread(target=rt.loop())
+
+    def begin_loop():
+        rt.loop()
+
+    t = Thread(target=begin_loop)
     t.start()
 
     return rt
@@ -95,7 +99,6 @@ class CLI(object):
     """
     Command Line Interface object designed to work with Ray.
     """
-
     def __init__(self, board_size, executable, is_handicap_game, komi, seconds_per_search, verbosity):
         self.board_size = board_size
         self.executable = executable
@@ -116,7 +119,6 @@ class CLI(object):
         :param pos: string
         :return: string
         """
-
         x = BOARD_COORD[SGF_COORD.index(pos[0])]
         y = self.board_size - SGF_COORD.index(pos[1])
 
@@ -129,7 +131,6 @@ class CLI(object):
         :param pos: string
         :return: string
         """
-
         # Pass moves are the empty string in sgf files
         if pos == "pass":
             return ""
@@ -154,7 +155,7 @@ class CLI(object):
 
     def add_move(self, color, pos):
         """
-        Convert given SGF coordinates to board coordinates and writes them to history as a command
+        Convert given SGF coordinates to board coordinates and writes them to history as a command to Ray
         :param color: str
         :param pos: str
         """
@@ -169,6 +170,10 @@ class CLI(object):
         self.history.clear()
 
     def whose_turn(self):
+        """
+        Return color of next move, based on number of handicap stones and moves
+        :return: "black" | "white"
+        """
         if len(self.history) == 0:
             return "white" if self.is_handicap_game else "black"
         else:
@@ -179,6 +184,11 @@ class CLI(object):
         return 0.01 * float(v.strip())
 
     def parse_status_update(self, message):
+        """
+        Parse number of visits, winrate and PV sequence
+        :param message:
+        :return: dictionary
+        """
         m = re.match(update_regex, message)
 
         if m is not None:
@@ -246,10 +256,10 @@ class CLI(object):
         p = Popen(self.executable + config.ray_settings, stdout=PIPE, stdin=PIPE, stderr=PIPE,
                   universal_newlines=True)
 
+        # Set board size, komi and time settings
         self.p = p
         self.stdout_thread = start_reader_thread(p.stdout)
         self.stderr_thread = start_reader_thread(p.stderr)
-
         time.sleep(2)
 
         if self.verbosity > 0:
@@ -290,7 +300,7 @@ class CLI(object):
 
     def play_move(self, pos):
         """
-        Play move
+        Send move to Ray
         :param pos: string
         """
         color = self.whose_turn()
@@ -320,6 +330,12 @@ class CLI(object):
         self.send_command(cmd, expected_success_count=count)
 
     def parse(self, stdout, stderr):
+        """
+        Parse Ray stdout & stderr
+        :param stdout: string
+        :param stderr: string
+        :return: stats, move_list
+        """
         if self.verbosity > 2:
             print("RAY STDOUT:\n" + "".join(stdout) + "\nEND OF RAY STDOUT", file=sys.stderr)
             print("RAY STDERR:\n" + "".join(stderr) + "\nEND OF RAY STDERR", file=sys.stderr)
@@ -347,7 +363,6 @@ class CLI(object):
 
             # Find status string
             m = re.match(status_regex, line)
-
             if m is not None:
                 stats['mc_winrate'] = flip_winrate(float(m.group(1)))
                 stats['nn_winrate'] = flip_winrate(float(m.group(2)))
@@ -385,9 +400,8 @@ class CLI(object):
                     stats['best'] = self.parse_position(m.group(3).split()[0])
                     stats['winrate'] = flip_winrate(self.to_fraction(m.group(2)))
 
-                m = re.match(stats_regex, line)
-
                 # Parse number of visits to stats
+                m = re.match(stats_regex, line)
                 if m is not None:
                     stats['visits'] = int(m.group(1))
                     summarized = True
@@ -395,11 +409,11 @@ class CLI(object):
         # Find finished string
         m = re.search(finished_regex, "".join(stdout))
 
-        # Parse chosen move to stats
+        # Add chosen move to stats
         if m is not None:
             stats['chosen'] = "resign" if m.group(1) == "resign" else self.parse_position(m.group(1))
 
-        # Parse bookmoves
+        # Add book move to move list
         if 'bookmoves' in stats and len(move_list) == 0:
             move_list.append({'pos': stats['chosen'], 'is_book': True})
         else:
@@ -415,7 +429,7 @@ class CLI(object):
                                reverse=True)
             move_list = [info for (i, info) in enumerate(move_list) if i == 0 or info['visits'] > 0]
 
-            # In the case where ray resigns, just replace with the move Leela did think was best
+            # In the case where Ray resigns, just replace with the move Ray did think was best
             if stats['chosen'] == "resign":
                 stats['chosen'] = stats['best']
 
@@ -431,7 +445,7 @@ class CLI(object):
             print("Analyzing state: " + self.whose_turn() + " to play", file=sys.stderr)
             print(self.board_state(), file=sys.stderr)
 
-        # Set time for move
+        # Set time for search
         self.send_command('time_left black %d 1' % self.seconds_per_search)
         self.send_command('time_left white %d 1' % self.seconds_per_search)
 
@@ -465,22 +479,21 @@ class CLI(object):
 
             time.sleep(1)
 
-        #
+        # Confirm generated move
         p.stdin.write("\n")
         p.stdin.flush()
-        time.sleep(1)
 
+        # Drain and parse Ray stdout & stderr
         out, err = self.drain()
         stdout.extend(out)
         stderr.extend(err)
-
         stats, move_list = self.parse(stdout, stderr)
 
         if self.verbosity > 0:
-            print("Chosen move: %s" % stats['chosen'], file=sys.stderr)
+            print("Chosen move: %s" % self.convert_position(stats['chosen']), file=sys.stderr)
 
             if 'best' in stats:
-                print("Best move: %s" % stats['best'], file=sys.stderr)
+                print("Best move: %s" % self.convert_position(stats['best']), file=sys.stderr)
                 print("Winrate: %f" % stats['winrate'], file=sys.stderr)
                 print("Visits: %d" % stats['visits'], file=sys.stderr)
 

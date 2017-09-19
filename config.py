@@ -1,9 +1,6 @@
 import os
 
 defaults = {
-    'leela_executable': "Leela0110GTP.exe",
-    'save_to_file': sgfanalyze.args.SGF_FILE.split('.')[0] + '_analyzed.sgf',
-
     # Display analysis on moves losing approx at least this much win rate when the game is close
     'analyze_threshold': 0.050,
     # Explore variations on moves losing approx at least this much win rate when the game is close
@@ -33,9 +30,14 @@ defaults = {
 }
 
 # For ray setting, review its docs
+leela_settings = [
+    '--gtp',
+    '--noponder'
+
+]
+
 ray_settings = [
     '--playout 100000',
     '--const-time 15',
-    '--thread 4',
-
+    '--thread 4'
 ]
