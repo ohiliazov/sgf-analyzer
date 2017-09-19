@@ -295,7 +295,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
     def record(node):
         if not node["is_root"]:
-            annotations.annotate_sgf(Cursor, annotations.format_winrate(node["stats"], node["move_list"], board_size, None),
+            annotations.annotate_sgf(cursor, annotations.format_winrate(node["stats"], node["move_list"], board_size, None),
                                      [], [])
             move_list_to_display = []
 
@@ -308,7 +308,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
             (analysis_comment, lb_values, tr_values) = annotations.format_analysis(node["stats"], move_list_to_display,
                                                                                    None)
-            annotations.annotate_sgf(Cursor, analysis_comment, lb_values, tr_values)
+            annotations.annotate_sgf(cursor, analysis_comment, lb_values, tr_values)
 
         for i in range(len(node["children"])):
             child = node["children"][i]
@@ -321,7 +321,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
                 # Only show variations for the principal line, to prevent info overload
                 elif i == 0:
                     pv = node["move_list"][i]["pv"]
-                    cursor = node["color"]
+                    color = node["color"]
                     num_to_show = min(len(pv), max(1, len(pv) * 2 / 3 - 1))
 
                     if args.num_to_show is not None:
@@ -723,8 +723,6 @@ if __name__ == '__main__':
 
     # Save final results into file
     write_to_file(args.save_to_file, 'w', sgf)
-
-    print(sgf)
 
     # delay in case of sequential running of several analysis
     time.sleep(1)
