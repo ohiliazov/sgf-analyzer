@@ -138,7 +138,7 @@ class CLI(object):
     def clear_history(self):
         self.history.clear()
 
-    def whoseturn(self):
+    def whose_turn(self):
         if len(self.history) == 0:
             return "white" if self.is_handicap_game else "black"
         else:
@@ -239,7 +239,7 @@ class CLI(object):
                 pass
 
     def playmove(self, pos):
-        color = self.whoseturn()
+        color = self.whose_turn()
         cmd = 'play %s %s' % (color, pos)
         self.send_command(cmd)
         self.history.append(cmd)
@@ -262,13 +262,13 @@ class CLI(object):
         p = self.p
         if self.verbosity > 1:
             print("Analyzing state:", file=sys.stderr)
-            print(self.whoseturn() + " to play", file=sys.stderr)
+            print(self.whose_turn() + " to play", file=sys.stderr)
             print(self.boardstate(), file=sys.stderr)
 
         self.send_command('time_left black %d 1' % self.seconds_per_search)
         self.send_command('time_left white %d 1' % self.seconds_per_search)
 
-        cmd = "genmove %s\n" % self.whoseturn()
+        cmd = "genmove %s\n" % self.whose_turn()
         # print(cmd)
         p.stdin.write(cmd)
         p.stdin.flush()
@@ -324,7 +324,7 @@ class CLI(object):
         move_list = []
 
         def maybe_flip(winrate):
-            return (1.0 - winrate) if self.whoseturn() == "white" else winrate
+            return (1.0 - winrate) if self.whose_turn() == "white" else winrate
 
         finished = False
         summarized = False
