@@ -1,9 +1,8 @@
-import sgfanalyze_ray
 import os
 
-config = {
+defaults = {
     'leela_executable': "Leela0110GTP.exe",
-    'save_to_file': sgfanalyze_ray.args.SGF_FILE.split('.')[0] + '_analyzed.sgf',
+    'save_to_file': sgfanalyze.args.SGF_FILE.split('.')[0] + '_analyzed.sgf',
 
     # Display analysis on moves losing approx at least this much win rate when the game is close
     'analyze_threshold': 0.050,
@@ -24,7 +23,7 @@ config = {
     'analyze_end': 1000,
     # Verbosity
     'verbosity': 0,
-    # Number of restarts when bot crashes
+    # Number of restarts when bots crashes
     'restarts': 1,
     # Path to directory to cache partially complete analyses
     'ckpt_dir': os.path.expanduser('~/.leela_checkpoints'),
@@ -32,3 +31,11 @@ config = {
     'skip_white': False,
     'skip_black': False
 }
+
+# For ray setting, review its docs
+ray_settings = [
+    '--playout 100000',
+    '--const-time 15',
+    '--thread 4',
+
+]

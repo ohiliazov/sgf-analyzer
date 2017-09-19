@@ -138,7 +138,7 @@ class CLI(object):
     def clear_history(self):
         self.history.clear()
 
-    def whoseturn(self):
+    def whose_turn(self):
         if len(self.history) == 0:
             return "white" if self.is_handicap_game else "black"
         else:
@@ -229,7 +229,7 @@ class CLI(object):
             stdout_thread.stop()
             stderr_thread.stop()
             try:
-                p.stdin.write('exit\n')
+                p.stdin.write('quit\n')
             except IOError:
                 pass
             time.sleep(0.1)
@@ -238,38 +238,35 @@ class CLI(object):
             except OSError:
                 pass
 
-    def playmove(self, pos):
-        color = self.whoseturn()
+    def play_move(self, pos):
+        color = self.whose_turn()
         cmd = 'play %s %s' % (color, pos)
         self.send_command(cmd)
-        self.history.append(cmd)
 
     def reset(self):
         self.send_command('clear_board')
 
-    def boardstate(self):
+    def board_state(self):
         self.send_command("showboard", drain=False)
         (so, se) = self.drain()
         return "".join(se)
 
-    def goto_position(self):
+    def go_to_position(self):
         count = len(self.history)
         cmd = "\n".join(self.history)
-        # print(cmd)
         self.send_command(cmd, expected_success_count=count)
 
     def analyze(self):
         p = self.p
         if self.verbosity > 1:
             print("Analyzing state:", file=sys.stderr)
-            print(self.whoseturn() + " to play", file=sys.stderr)
-            print(self.boardstate(), file=sys.stderr)
+            print(self.whose_turn() + " to play", file=sys.stderr)
+            print(self.board_state(), file=sys.stderr)
 
         self.send_command('time_left black %d 1' % self.seconds_per_search)
         self.send_command('time_left white %d 1' % self.seconds_per_search)
 
-        cmd = "genmove %s\n" % self.whoseturn()
-        # print(cmd)
+        cmd = "genmove %s\n" % self.whose_turn()
         p.stdin.write(cmd)
         p.stdin.flush()
 
@@ -278,10 +275,10 @@ class CLI(object):
         stdout = []
 
         while updated < 20 + self.seconds_per_search * 2 and self.p is not None:
-            o, l = self.drain()
-            stdout.extend(o)
-            stderr.extend(l)
-            d = self.parse_status_update("".join(l))
+            out, err = self.drain()
+            stdout.extend(out)
+            stderr.extend(err)
+            d = self.parse_status_update("".join(err))
             if 'visits' in d:
                 if self.verbosity > 0:
                     print("Visited %d positions" % d['visits'], file=sys.stderr)
@@ -294,12 +291,12 @@ class CLI(object):
             time.sleep(1)
 
         p.stdin.write("\n")
-        time.sleep(1)
         p.stdin.flush()
+        time.sleep(1)
 
-        o, l = self.drain()
-        stdout.extend(o)
-        stderr.extend(l)
+        out, err = self.drain()
+        stdout.extend(out)
+        stderr.extend(err)
 
         stats, move_list = self.parse(stdout, stderr)
         if self.verbosity > 0:
@@ -323,8 +320,8 @@ class CLI(object):
         stats = {}
         move_list = []
 
-        def maybe_flip(winrate):
-            return (1.0 - winrate) if self.whoseturn() == "white" else winrate
+        def flip_winrate(wr):
+            return (1.0 - wr) if self.whose_turn() == "white" else wr
 
         finished = False
         summarized = False
@@ -340,32 +337,32 @@ class CLI(object):
 
             m = re.match(status_regex, line)
             if m is not None:
-                stats['mc_winrate'] = maybe_flip(float(m.group(1)))
-                stats['nn_winrate'] = maybe_flip(float(m.group(2)))
+                stats['mc_winrate'] = flip_winrate(float(m.group(1)))
+                stats['nn_winrate'] = flip_winrate(float(m.group(2)))
                 stats['margin'] = m.group(3)
 
             m = re.match(status_regex_no_vn, line)
             if m is not None:
-                stats['mc_winrate'] = maybe_flip(float(m.group(1)))
+                stats['mc_winrate'] = flip_winrate(float(m.group(1)))
                 stats['margin'] = m.group(2)
 
             m = re.match(move_regex, line)
             if m is not None:
                 pos = self.parse_position(m.group(1))
                 visits = int(m.group(2))
-                w = maybe_flip(self.to_fraction(m.group(3)))
-                u = maybe_flip(self.to_fraction(m.group(4)))
-                vp = maybe_flip(self.to_fraction(m.group(5)))
-                vn = int(m.group(6))
-                n = self.to_fraction(m.group(7))
-                seq = m.group(8)
-                seq = [self.parse_position(p) for p in seq.split()]
+                winrate = flip_winrate(self.to_fraction(m.group(3)))
+                mc_winrate = flip_winrate(self.to_fraction(m.group(4)))
+                nn_winrate = flip_winrate(self.to_fraction(m.group(5)))
+                nn_count = int(m.group(6))
+                policy_prob = self.to_fraction(m.group(7))
+                pv = m.group(8)
+                pv = [self.parse_position(p) for p in pv.split()]
 
                 info = {
                     'pos': pos,
                     'visits': visits,
-                    'winrate': w, 'mc_winrate': u, 'nn_winrate': vp, 'nn_count': vn,
-                    'policy_prob': n, 'pv': seq
+                    'winrate': winrate, 'mc_winrate': mc_winrate, 'nn_winrate': nn_winrate, 'nn_count': nn_count,
+                    'policy_prob': policy_prob, 'pv': pv
                 }
                 move_list.append(info)
 
@@ -373,18 +370,18 @@ class CLI(object):
             if m is not None:
                 pos = self.parse_position(m.group(1))
                 visits = int(m.group(2))
-                u = maybe_flip(self.to_fraction(m.group(3)))
-                r = maybe_flip(self.to_fraction(m.group(4)))
+                mc_winrate = flip_winrate(self.to_fraction(m.group(3)))
+                r = flip_winrate(self.to_fraction(m.group(4)))
                 rn = int(m.group(5))
-                n = self.to_fraction(m.group(6))
-                seq = m.group(7)
-                seq = [self.parse_position(p) for p in seq.split()]
+                policy_prob = self.to_fraction(m.group(6))
+                pv = m.group(7)
+                pv = [self.parse_position(p) for p in pv.split()]
 
                 info = {
                     'pos': pos,
                     'visits': visits,
-                    'winrate': u, 'mc_winrate': u, 'r_winrate': r, 'r_count': rn,
-                    'policy_prob': n, 'pv': seq
+                    'winrate': mc_winrate, 'mc_winrate': mc_winrate, 'r_winrate': r, 'r_count': rn,
+                    'policy_prob': policy_prob, 'pv': pv
                 }
                 move_list.append(info)
 
@@ -393,7 +390,7 @@ class CLI(object):
 
                 if m is not None:
                     stats['best'] = self.parse_position(m.group(3).split()[0])
-                    stats['winrate'] = maybe_flip(self.to_fraction(m.group(2)))
+                    stats['winrate'] = flip_winrate(self.to_fraction(m.group(2)))
 
                 m = re.match(stats_regex, line)
 
@@ -410,6 +407,7 @@ class CLI(object):
             move_list.append({'pos': stats['chosen'], 'is_book': True})
         else:
             required_keys = ['mc_winrate', 'margin', 'best', 'winrate', 'visits']
+
             for k in required_keys:
                 if k not in stats:
                     print("WARNING: analysis stats missing %s data" % k, file=sys.stderr)
