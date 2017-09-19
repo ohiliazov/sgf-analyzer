@@ -13,7 +13,8 @@ many grains of salt.
 
 ### How to Use
 First, download and install the commandline/GTP engine version of Leela from:
-https://sjeng.org/leela.html
+
+    https://sjeng.org/leela.html
 
 Download or Clone this repository to a local directory:
 
