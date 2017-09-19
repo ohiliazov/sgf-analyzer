@@ -195,7 +195,7 @@ def do_analyze(leela, base_dir, verbosity):
             ckpt_file.close()
     else:
         leela.reset()
-        leela.goto_position()
+        leela.go_to_position()
         stats, move_list = leela.analyze()
         with open(ckpt_fn, 'wb') as ckpt_file:
             pickle.dump((stats, move_list), ckpt_file)
