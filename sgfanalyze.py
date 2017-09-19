@@ -214,7 +214,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
     if 'bookmoves' in stats or len(move_list) <= 0:
         return None
 
-    rootcolor = leela.whoseturn()
+    rootcolor = leela.whose_turn()
     leaves = []
     tree = {"children": [], "is_root": True, "history": [], "explored": False, "prob": 1.0, "stats": stats,
             "move_list": move_list, "color": rootcolor}
@@ -264,7 +264,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
     def search(node):
         for mv in node["history"]:
-            leela.add_move(leela.whoseturn(), mv)
+            leela.add_move(leela.whose_turn(), mv)
         stats, move_list = do_analyze(leela, base_dir, verbosity)
         expand(node, stats, move_list)
 
@@ -587,7 +587,7 @@ if __name__ == '__main__':
             cursor.next()
             move_num += 1
             this_move = add_moves_to_leela(cursor, leela)
-            current_player = leela.whoseturn()
+            current_player = leela.whose_turn()
             prev_player = "white" if current_player == "black" else "black"
 
             if ((args.analyze_start <= move_num <= args.analyze_end) or
@@ -610,10 +610,10 @@ if __name__ == '__main__':
                 if 'winrate' in stats and (move_num - 1) in collected_best_moves:
                     if this_move != collected_best_moves[move_num - 1]:
                         delta = stats['winrate'] - collected_best_move_winrates[move_num - 1]
-                        delta = min(0.0, (-delta if leela.whoseturn() == "black" else delta))
+                        delta = min(0.0, (-delta if leela.whose_turn() == "black" else delta))
                         transdelta = transform_winrate(stats['winrate']) - \
                                      transform_winrate(collected_best_move_winrates[move_num - 1])
-                        transdelta = min(0.0, (-transdelta if leela.whoseturn() == "black" else transdelta))
+                        transdelta = min(0.0, (-transdelta if leela.whose_turn() == "black" else transdelta))
 
                     if transdelta <= -analyze_threshold:
                         (delta_comment, delta_lb_values) = annotations.format_delta_info(delta, transdelta, stats,
