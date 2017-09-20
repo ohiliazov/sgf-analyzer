@@ -11,12 +11,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-from sgftools import gotools, leela, annotations, progressbar, sgflib
-from sgftools.sgflib import Cursor
+from sgftools import gotools, annotations, progressbar, sgflib
+from sgftools.leela import Leela
 
 DEFAULT_STDEV = 0.22
 RESTART_COUNT = 1
+
 
 def write_to_file(file, mode, content):
     with open(file, mode, encoding='utf-8') as f:
@@ -52,7 +52,7 @@ def graph_winrates(winrates, file_to_save):
     plt.ylim(0, 1)
 
     # set size of numbers on axes
-    plt.yticks(np.arange(0, 1.05, 0.05),fontsize=6)
+    plt.yticks(np.arange(0, 1.05, 0.05), fontsize=6)
     plt.yticks(fontsize=6)
 
     # add labels to axes
@@ -207,7 +207,6 @@ def do_analyze(leela, base_dir, verbosity):
 # move_list is from a call to do_analyze
 # Iteratively expands a tree of moves by expanding on the leaf with the highest "probability of reaching".
 def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_dir, args):
-
     nodes_per_variation = args.nodes_per_variation
     verbosity = args.verbosity
 
@@ -295,7 +294,8 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
     def record(node):
         if not node["is_root"]:
-            annotations.annotate_sgf(cursor, annotations.format_winrate(node["stats"], node["move_list"], board_size, None),
+            annotations.annotate_sgf(cursor,
+                                     annotations.format_winrate(node["stats"], node["move_list"], board_size, None),
                                      [], [])
             move_list_to_display = []
 
@@ -416,7 +416,6 @@ if __name__ == '__main__':
                         help="Do not display analysis or explore variations for white mistakes")
     parser.add_argument('--skip-black', dest='skip_black', action='store_true',
                         help="Do not display analysis or explore variations for black mistakes")
-
 
     args = parser.parse_args()
     sgf_fn = args.SGF_FILE
@@ -560,12 +559,12 @@ if __name__ == '__main__':
         progress_bar.update(approx_tasks_done(), approx_tasks_max())
 
 
-    leela = leela.CLI(board_size=board_size,
-                      executable=args.executable,
-                      is_handicap_game=is_handicap_game,
-                      komi=komi,
-                      seconds_per_search=args.seconds_per_search,
-                      verbosity=args.verbosity)
+    leela = Leela(board_size=board_size,
+                  executable=args.executable,
+                  is_handicap_game=is_handicap_game,
+                  komi=komi,
+                  seconds_per_search=args.seconds_per_search,
+                  verbosity=args.verbosity)
 
     collected_winrates = {}
     collected_best_moves = {}
@@ -641,7 +640,8 @@ if __name__ == '__main__':
 
                     cursor.previous()
 
-                annotations.annotate_sgf(cursor, annotations.format_winrate(stats, move_list, board_size, next_game_move),
+                annotations.annotate_sgf(cursor,
+                                         annotations.format_winrate(stats, move_list, board_size, next_game_move),
                                          [], [])
 
                 if has_prev and ((move_num - 1) in comment_requests_analyze or (
@@ -726,4 +726,3 @@ if __name__ == '__main__':
 
     # delay in case of sequential running of several analysis
     time.sleep(1)
-

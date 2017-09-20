@@ -6,7 +6,7 @@ import config
 
 from subprocess import Popen, PIPE
 
-from sgftools.readerthread import start_reader_thread
+import sgftools.readerthread as rt
 from sgftools.utils import convert_position, parse_position
 
 # Regex
@@ -19,11 +19,10 @@ move_regex = r""
 best_regex = r""
 
 
-class CLI(object):
+class Ray(object):
     """
     Command Line Interface object designed to work with Ray.
     """
-
     def __init__(self, board_size, executable, is_handicap_game, komi, seconds_per_search, verbosity):
         self.board_size = board_size
         self.executable = executable
@@ -156,8 +155,8 @@ class CLI(object):
 
         # Set board size, komi and time settings
         self.popen = popen
-        self.stdout_thread = start_reader_thread(popen.stdout)
-        self.stderr_thread = start_reader_thread(popen.stderr)
+        self.stdout_thread = rt.start_reader_thread(popen.stdout)
+        self.stderr_thread = rt.start_reader_thread(popen.stderr)
         time.sleep(3)
 
         if self.verbosity > 0:

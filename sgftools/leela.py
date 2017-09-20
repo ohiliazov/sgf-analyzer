@@ -2,10 +2,10 @@ import sys
 import re
 import time
 import hashlib
-from queue import Queue, Empty
-from threading import Thread
-from subprocess import Popen, PIPE  # STDOUT
+from subprocess import Popen, PIPE
 import config
+import sgftools.readerthread as rt
+
 
 SGF_COORD = 'abcdefghijklmnopqrstuvwxy'
 BOARD_COORD = 'abcdefghjklmnopqrstuvwxyz'
@@ -34,81 +34,7 @@ bookmove_regex = r'([0-9]+) book moves, ([0-9]+) total positions'
 finished_regex = r'= ([A-Z][0-9]+|resign|pass)'
 
 
-class ReaderThread:
-    """
-    ReaderThread perpetually reads from the given file descriptor and pushes the result to a queue.
-    """
-    def __init__(self, fd):
-        self.queue = Queue()
-        self.fd = fd  # stdout or stderr is given
-        self.stopped = False
-
-    def stop(self):
-        """
-        No lock since this is just a simple bool that only ever changes one way
-        """
-        self.stopped = True
-
-    def loop(self):
-        """
-        Loop fd.readline() due to EOF until the process is closed
-        """
-        while not self.stopped and not self.fd.closed:
-            line = None
-            try:
-                line = self.fd.readline()
-            except IOError:
-                time.sleep(0.2)
-                pass
-            if line is not None and len(line) > 0:
-                self.queue.put(line)
-
-    def readline(self):
-        """
-        Read single line from queue
-        :return: str
-        """
-        try:
-            line = self.queue.get_nowait()
-            return line
-        except Empty:
-            return ""
-
-    def read_all_lines(self):
-        """
-        Read all lines from queue.
-        :return: list
-        """
-        lines = []
-
-        while True:
-            try:
-                line = self.queue.get_nowait()
-                lines.append(line)
-            except Empty:
-                break
-
-        return lines
-
-
-def start_reader_thread(fd):
-    """
-    Start file descriptor loop thread
-    :param fd: stdout | stderr
-    :return: ReaderThread
-    """
-    rt = ReaderThread(fd)
-
-    def begin_loop():
-        rt.loop()
-
-    t = Thread(target=begin_loop)
-    t.start()
-
-    return rt
-
-
-class CLI(object):
+class Leela(object):
     """
     Command Line Interface object designed to work with Leela.
     """
@@ -225,7 +151,12 @@ class CLI(object):
         se = self.stderr_thread.read_all_lines()
         return so, se
 
-    def send_command(self, cmd, expected_success_count=1, drain=True, timeout=20):
+    @staticmethod
+    def write_to_stdin(p, cmd=""):
+        p.stdin.write(cmd+"\n")
+        p.stdin.flush()
+
+    def send_command(self, cmd, expected_success_count=1, drain=True):
         """
         Send command to Ray and drains stdout/stderr
         :param cmd: string
@@ -237,8 +168,7 @@ class CLI(object):
         timeout = 200
 
         # Sending command
-        self.p.stdin.write(cmd + "\n")
-        self.p.stdin.flush()
+        self.write_to_stdin(self.p, cmd)
 
         while tries <= timeout and self.p is not None:
             # Loop readline until reach given number of success
@@ -274,8 +204,8 @@ class CLI(object):
                   universal_newlines=True)
 
         self.p = p
-        self.stdout_thread = start_reader_thread(p.stdout)
-        self.stderr_thread = start_reader_thread(p.stderr)
+        self.stdout_thread = rt.start_reader_thread(p.stdout)
+        self.stderr_thread = rt.start_reader_thread(p.stderr)
         time.sleep(2)
 
         if self.verbosity > 0:
@@ -303,7 +233,7 @@ class CLI(object):
             stdout_thread.stop()
             stderr_thread.stop()
             try:
-                p.stdin.write('quit\n')
+                self.write_to_stdin(p, 'quit')
             except IOError:
                 pass
             time.sleep(0.1)
@@ -491,9 +421,8 @@ class CLI(object):
         self.send_command('time_left white %d 1' % self.seconds_per_search)
 
         # Generate next move
-        cmd = "genmove %s\n" % self.whose_turn()
-        p.stdin.write(cmd)
-        p.stdin.flush()
+        cmd = "genmove %s" % self.whose_turn()
+        self.write_to_stdin(p, cmd)
 
         updated = 0
         stderr = []
@@ -521,8 +450,7 @@ class CLI(object):
             time.sleep(1)
 
         # Confirm generated move
-        p.stdin.write("\n")
-        p.stdin.flush()
+        self.write_to_stdin(p)
 
         # Drain and parse Leela stdout & stderr
         out, err = self.drain()

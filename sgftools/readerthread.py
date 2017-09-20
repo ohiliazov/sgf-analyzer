@@ -36,7 +36,7 @@ class ReaderThread:
     def readline(self):
         """
         Read single line from queue
-        :return: str
+        :return: output line
         """
         try:
             line = self.queue.get_nowait()
@@ -47,7 +47,7 @@ class ReaderThread:
     def read_all_lines(self):
         """
         Read all lines from queue.
-        :return: list
+        :return: output lines
         """
         lines = []
 
