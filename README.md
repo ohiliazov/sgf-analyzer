@@ -13,7 +13,8 @@ many grains of salt.
 
 ### How to Use
 First, download and install the commandline/GTP engine version of Leela from:
-https://sjeng.org/leela.html
+
+    https://sjeng.org/leela.html
 
 Download or Clone this repository to a local directory:
 
@@ -24,9 +25,8 @@ Then run the script to analyze a game, providing the command with arguments:
 * file name of game to analyze 
 * path to GTP version of Leela, such as ./Leela0100GTP.exe or ./leela_0100_linux_x64, etc.
 * other parameters are optional
-
-
-     sgfanalyze.py my_game.sgf --leela /PATH/TO/LEELA.exe
+    
+      sgfanalyze.py my_game.sgf --leela /PATH/TO/LEELA.exe
 
 Some of available options:
 
@@ -51,11 +51,11 @@ ___
 
    - [ ] clean-up suggested variations with low visits rate
    - [ ] mark by A-B alternatives which has low difference
-   - [ ] support Ray bot
-   - [ ] code refactoring 
-   - [ ] add documentation
+   - [ ] support Ray bot (in progress) 
+   - [ ] code refactoring (in progress) 
+   - [ ] add documentation (in progress) 
    - [ ] tune performance between leela calls
-   - [ ] support/clean-up non english characters (bug)
+   - [x] support/clean-up non english characters (bug)
    - [ ] show even branches
    - [ ] add params to stop analysis if win rate drops > ~80%
    - [x] update pdf graph output to have better look
