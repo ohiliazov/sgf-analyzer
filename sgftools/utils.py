@@ -91,3 +91,25 @@ def graph_winrates(winrates, file_to_save):
     # in this script for pdf it use the same file name as provided sgf file to avoid extra parameters
     file_name = file_to_save.split('.')[0] + '_graph.pdf'
     plt.savefig(file_name, dpi=200, format='pdf', bbox_inches='tight')
+
+
+def list_filter(list_to_filter, filter_list):
+    """
+    Filter given list to exclude elements, mentioned in filter_list
+    :param list_to_filter: list
+    :param filter_list: list
+
+    :return: list
+    """
+    return list(filter(lambda x: len(x) != 0 and x not in filter_list, list_to_filter))
+
+
+def join_list_into_str(list_to_join, separator):
+    """
+    Convert list into string, avoid printing in console [brackets]
+    :param list_to_join: list
+    :param separator: str
+
+    :return: string
+    """
+    return separator.join(map(str, list_to_join))
