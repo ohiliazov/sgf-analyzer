@@ -63,6 +63,7 @@ ___
    - [x] write to file with Python 3 instead of console
    - [x] add limitation to show suggested moves
    - [x] add config file
+   - [ ] add logger
 
 ___
 

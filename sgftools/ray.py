@@ -7,7 +7,7 @@ import config
 from subprocess import Popen, PIPE
 
 import sgftools.readerthread as rt
-from sgftools.utils import convert_position, parse_position
+from sgftools.utils import convert_position, parse_position, list_filter, join_list_into_str
 
 # Regex
 update_regex = r""
@@ -23,7 +23,8 @@ class Ray(object):
     """
     Command Line Interface object designed to work with Ray.
     """
-    def __init__(self, board_size, executable, is_handicap_game, komi, seconds_per_search, verbosity):
+
+    def __init__(self, executable, board_size, is_handicap_game, komi, seconds_per_search, verbosity):
         self.board_size = board_size
         self.executable = executable
         self.is_handicap_game = is_handicap_game
@@ -103,6 +104,19 @@ class Ray(object):
         """
         stdout = self.stdout_thread.read_all_lines()
         stderr = self.stderr_thread.read_all_lines()
+
+        # TODO: replace this ugly thing. It's print all responses from engine in console.
+        # TODO: need to add logging of whole input/output into file
+        filter_list = ['\n']
+        # ugly way to avoid printing empty lines
+        stdout_print = join_list_into_str(list_filter(stdout, filter_list), '')
+        stderr_print = join_list_into_str(list_filter(stderr, filter_list), '')
+
+        if self.verbosity > 2 and stdout_print:
+            print(stdout_print, file=sys.stderr)
+        if self.verbosity > 2 and stderr_print:
+            print(stderr_print, file=sys.stderr)
+
         return stdout, stderr
 
     def send_command(self, cmd, expected_success_count=1, drain=True):
@@ -117,6 +131,9 @@ class Ray(object):
         timeout = 200
 
         # Sending command
+        if self.verbosity > 0:
+            print('Send command to Ray: ' + cmd, file=sys.stderr)
+
         self.popen.stdin.write(cmd + "\n")
         self.popen.stdin.flush()
 
@@ -149,8 +166,12 @@ class Ray(object):
         if self.verbosity > 0:
             print("Starting ray...", file=sys.stderr)
 
-        # TODO: command should be provided as an array [--const-time, 10, --thread, 4]
-        popen = Popen(self.executable + config.ray_settings, stdout=PIPE, stdin=PIPE, stderr=PIPE,
+        # command should be provided as an array [--const-time, 10, --thread, 4]
+        args = []
+        for el in config.ray_settings:
+            args += el.split()
+
+        popen = Popen([self.executable] + args, stdout=PIPE, stdin=PIPE, stderr=PIPE,
                       universal_newlines=True)
 
         # Set board size, komi and time settings
@@ -160,11 +181,15 @@ class Ray(object):
         time.sleep(3)
 
         if self.verbosity > 0:
-            print("Setting board size %d and komi %f to Leela" % (self.board_size, self.komi), file=sys.stderr)
+            print("Setting board size %d and komi %f to Ray:" % (self.board_size, self.komi), file=sys.stderr)
 
         self.send_command('boardsize %d' % self.board_size)
+        self.send_command('clear_board')
         self.send_command('komi %f' % self.komi)
         self.send_command('time_settings 0 %d 1' % self.seconds_per_search)
+
+        # temp command to test
+        self.send_command('genmove b')
 
     def stop(self):
         """
