@@ -2,13 +2,12 @@ import time
 import hashlib
 import re
 import sys
-from queue import Queue, Empty
-from threading import Thread
-from subprocess import Popen, PIPE
 import config
 
-SGF_COORD = 'abcdefghijklmnopqrstuvwxy'
-BOARD_COORD = 'abcdefghjklmnopqrstuvwxyz'  # without "i"
+from subprocess import Popen, PIPE
+
+from sgftools.readerthread import start_reader_thread
+from sgftools.utils import convert_position, parse_position
 
 # Regex
 update_regex = r""
@@ -20,85 +19,11 @@ move_regex = r""
 best_regex = r""
 
 
-class ReaderThread:
-    """
-    ReaderThread perpetually reads from the given file descriptor and pushes the result to a queue.
-    """
-
-    def __init__(self, fd):
-        self.queue = Queue()
-        self.fd = fd  # stdout or stderr is given
-        self.stopped = False
-
-    def stop(self):
-        """
-        No lock since this is just a simple bool that only ever changes one way
-        """
-        self.stopped = True
-
-    def loop(self):
-        """
-        Loop fd.readline() due to EOF until the process is closed
-        """
-        while not self.stopped and not self.fd.closed:
-            try:
-                line = self.fd.readline()
-                if len(line) > 0:
-                    self.queue.put(line)
-            except IOError:
-                time.sleep(0.2)
-                pass
-
-    def readline(self):
-        """
-        Read single line from queue
-        :return: str
-        """
-        try:
-            line = self.queue.get_nowait()
-            return line
-        except Empty:
-            return ""
-
-    def read_all_lines(self):
-        """
-        Read all lines from queue.
-        :return: list
-        """
-        lines = []
-
-        while True:
-            try:
-                line = self.queue.get_nowait()
-                lines.append(line)
-            except Empty:
-                break
-
-        return lines
-
-
-#
-def start_reader_thread(fd):
-    """
-    Start file descriptor loop thread
-    :param fd: stdout | stderr
-    :return: ReaderThread
-    """
-    rt = ReaderThread(fd)
-
-    def begin_loop():
-        rt.loop()
-
-    t = Thread(target=begin_loop)
-    t.start()
-
-    return rt
-
-
 class CLI(object):
     """
     Command Line Interface object designed to work with Ray.
     """
+
     def __init__(self, board_size, executable, is_handicap_game, komi, seconds_per_search, verbosity):
         self.board_size = board_size
         self.executable = executable
@@ -107,38 +32,10 @@ class CLI(object):
         self.seconds_per_search = seconds_per_search
         self.verbosity = verbosity
 
-        self.p = None
+        self.popen = None
         self.stdout_thread = None
         self.stderr_thread = None
         self.history = []
-
-    def convert_position(self, pos):
-        """
-        Convert SGF coordinates to board position coordinates
-        Example aa -> a1, qq -> p15
-        :param pos: string
-        :return: string
-        """
-        x = BOARD_COORD[SGF_COORD.index(pos[0])]
-        y = self.board_size - SGF_COORD.index(pos[1])
-
-        return '%s%d' % (x, y)
-
-    def parse_position(self, pos):
-        """
-        Convert board position coordinates to SGF coordinates
-        Example A1 -> aa, P15 -> qq
-        :param pos: string
-        :return: string
-        """
-        # Pass moves are the empty string in sgf files
-        if pos == "pass":
-            return ""
-
-        x = BOARD_COORD.index(pos[0].lower())
-        y = self.board_size - int(pos[1:])
-
-        return "%s%s" % (SGF_COORD[x], SGF_COORD[y])
 
     def history_hash(self):
         """
@@ -159,7 +56,7 @@ class CLI(object):
         :param color: str
         :param pos: str
         """
-        move = 'pass' if pos in ['', 'tt'] else self.convert_position(pos)
+        move = 'pass' if pos in ['', 'tt'] else convert_position(self.board_size, pos)
         cmd = "play %s %s" % (color, move)
         self.history.append(cmd)
 
@@ -193,11 +90,11 @@ class CLI(object):
 
         if m is not None:
             visits = int(m.group(1))
-            winrate = self.to_fraction(m.group(2))
+            win_rate = self.to_fraction(m.group(2))
             seq = m.group(3)
-            seq = [self.parse_position(p) for p in seq.split()]
+            seq = [parse_position(self.board_size, pos) for pos in seq.split()]
 
-            return {'visits': visits, 'winrate': winrate, 'seq': seq}
+            return {'visits': visits, 'winrate': win_rate, 'seq': seq}
         return {}
         pass
 
@@ -205,9 +102,9 @@ class CLI(object):
         """
         Drain all remaining stdout and stderr contents
         """
-        so = self.stdout_thread.read_all_lines()
-        se = self.stderr_thread.read_all_lines()
-        return so, se
+        stdout = self.stdout_thread.read_all_lines()
+        stderr = self.stderr_thread.read_all_lines()
+        return stdout, stderr
 
     def send_command(self, cmd, expected_success_count=1, drain=True):
         """
@@ -221,10 +118,10 @@ class CLI(object):
         timeout = 200
 
         # Sending command
-        self.p.stdin.write(cmd + "\n")
-        self.p.stdin.flush()
+        self.popen.stdin.write(cmd + "\n")
+        self.popen.stdin.flush()
 
-        while tries <= timeout and self.p is not None:
+        while tries <= timeout and self.popen is not None:
             # Loop readline until reach given number of success
             while True:
                 s = self.stdout_thread.readline()
@@ -253,14 +150,15 @@ class CLI(object):
         if self.verbosity > 0:
             print("Starting ray...", file=sys.stderr)
 
-        p = Popen(self.executable + config.ray_settings, stdout=PIPE, stdin=PIPE, stderr=PIPE,
-                  universal_newlines=True)
+        # TODO: command should be provided as an array [--const-time, 10, --thread, 4]
+        popen = Popen(self.executable + config.ray_settings, stdout=PIPE, stdin=PIPE, stderr=PIPE,
+                      universal_newlines=True)
 
         # Set board size, komi and time settings
-        self.p = p
-        self.stdout_thread = start_reader_thread(p.stdout)
-        self.stderr_thread = start_reader_thread(p.stderr)
-        time.sleep(2)
+        self.popen = popen
+        self.stdout_thread = start_reader_thread(popen.stdout)
+        self.stderr_thread = start_reader_thread(popen.stderr)
+        time.sleep(3)
 
         if self.verbosity > 0:
             print("Setting board size %d and komi %f to Leela" % (self.board_size, self.komi), file=sys.stderr)
@@ -276,11 +174,11 @@ class CLI(object):
         if self.verbosity > 0:
             print("Stopping ray...", file=sys.stderr)
 
-        if self.p is not None:
-            p = self.p
+        if self.popen is not None:
+            p = self.popen
             stdout_thread = self.stdout_thread
             stderr_thread = self.stderr_thread
-            self.p = None
+            self.popen = None
             self.stdout_thread = None
             self.stderr_thread = None
             stdout_thread.stop()
@@ -371,14 +269,14 @@ class CLI(object):
             # Find move string
             m = re.match(move_regex, line)
             if m is not None:
-                pos = self.parse_position(m.group(1))
+                pos = parse_position(self.board_size, m.group(1))
                 visits = int(m.group(2))
                 winrate = flip_winrate(self.to_fraction(m.group(3)))
                 mc_winrate = flip_winrate(self.to_fraction(m.group(4)))
                 nn_winrate = flip_winrate(self.to_fraction(m.group(5)))
                 nn_count = int(m.group(6))
                 policy_prob = self.to_fraction(m.group(7))
-                pv = [self.parse_position(p) for p in m.group(8).split()]
+                pv = [parse_position(self.board_size, p) for p in m.group(8).split()]
 
                 info = {
                     'pos': pos,
@@ -397,7 +295,7 @@ class CLI(object):
 
                 # Parse best move and its winrate
                 if m is not None:
-                    stats['best'] = self.parse_position(m.group(3).split()[0])
+                    stats['best'] = parse_position(self.board_size, m.group(3).split()[0])
                     stats['winrate'] = flip_winrate(self.to_fraction(m.group(2)))
 
                 # Parse number of visits to stats
@@ -411,7 +309,7 @@ class CLI(object):
 
         # Add chosen move to stats
         if m is not None:
-            stats['chosen'] = "resign" if m.group(1) == "resign" else self.parse_position(m.group(1))
+            stats['chosen'] = "resign" if m.group(1) == "resign" else parse_position(self.board_size, m.group(1))
 
         # Add book move to move list
         if 'bookmoves' in stats and len(move_list) == 0:
@@ -440,7 +338,7 @@ class CLI(object):
         Analyze current position with given time settings
         :return: tuple
         """
-        p = self.p
+        p = self.popen
         if self.verbosity > 1:
             print("Analyzing state: " + self.whose_turn() + " to play", file=sys.stderr)
             print(self.board_state(), file=sys.stderr)
@@ -459,7 +357,7 @@ class CLI(object):
         stdout = []
 
         # Some scary loop to find end of analysis
-        while updated < 20 + self.seconds_per_search * 2 and self.p is not None:
+        while updated < 20 + self.seconds_per_search * 2 and self.popen is not None:
             out, err = self.drain()
             stdout.extend(out)
             stderr.extend(err)
@@ -490,10 +388,10 @@ class CLI(object):
         stats, move_list = self.parse(stdout, stderr)
 
         if self.verbosity > 0:
-            print("Chosen move: %s" % self.convert_position(stats['chosen']), file=sys.stderr)
+            print("Chosen move: %s" % convert_position(self.board_size, stats['chosen']), file=sys.stderr)
 
             if 'best' in stats:
-                print("Best move: %s" % self.convert_position(stats['best']), file=sys.stderr)
+                print("Best move: %s" % convert_position(self.board_size, stats['best']), file=sys.stderr)
                 print("Winrate: %f" % stats['winrate'], file=sys.stderr)
                 print("Visits: %d" % stats['visits'], file=sys.stderr)
 
