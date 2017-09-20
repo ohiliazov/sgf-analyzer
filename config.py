@@ -14,9 +14,10 @@ ray_settings = [
 ]
 
 settings = {
-    'seconds_per_search': 15,  # How many seconds to use per search?
-    'analyze_threshold': 0.050,  # Display analysis on moves losing approx at least this much winrate
-    'variations_threshold': 0.050,  # Explore variations on moves losing approx at least this much winrate
+    'seconds_per_search': 10,  # How many seconds to use per search?
+    'analyze_threshold': 0.05,  # Display analysis on moves losing approx at least this much winrate
+    'variations_threshold': 0.05,  # Explore variations on moves losing approx at least this much winrate
+    'additional_time': 60,  # How much time to add when winrate drops
     'nodes_per_variation': 3,  # How many nodes to explore in each variation tree
     'num_to_show': 0,  # Number of moves to show from the sequence of suggested moves
     'win_graph': False,  # Build pdf graph of win rate, must have matplotlib installed

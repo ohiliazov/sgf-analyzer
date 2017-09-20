@@ -54,7 +54,7 @@ ___
    - [ ] support Ray bot (in progress) 
    - [ ] code refactoring (in progress) 
    - [ ] add documentation (in progress) 
-   - [ ] tune performance between leela calls
+   - [x] tune performance between leela calls
    - [x] support/clean-up non english characters (bug)
    - [ ] show even branches
    - [ ] add params to stop analysis if win rate drops > ~80%

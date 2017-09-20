@@ -6,7 +6,6 @@ from subprocess import Popen, PIPE
 import config
 import sgftools.readerthread as rt
 
-
 SGF_COORD = 'abcdefghijklmnopqrstuvwxy'
 BOARD_COORD = 'abcdefghjklmnopqrstuvwxyz'
 
@@ -38,6 +37,7 @@ class Leela(object):
     """
     Command Line Interface object designed to work with Leela.
     """
+
     def __init__(self, board_size, executable, is_handicap_game, komi, seconds_per_search, verbosity):
         self.board_size = board_size
         self.executable = executable
@@ -153,7 +153,7 @@ class Leela(object):
 
     @staticmethod
     def write_to_stdin(p, cmd=""):
-        p.stdin.write(cmd+"\n")
+        p.stdin.write(cmd + "\n")
         p.stdin.flush()
 
     def send_command(self, cmd, expected_success_count=1, drain=True):
@@ -281,8 +281,8 @@ class Leela(object):
         :return: stats, move_list
         """
         if self.verbosity > 2:
-            print("LEELA STDOUT:\n"+"".join(stdout)+"\END OF LEELA STDOUT", file=sys.stderr)
-            print("LEELA STDERR:\n"+"".join(stderr)+"\END OF LEELA STDERR", file=sys.stderr)
+            print("LEELA STDOUT:\n" + "".join(stdout) + "\END OF LEELA STDOUT", file=sys.stderr)
+            print("LEELA STDERR:\n" + "".join(stderr) + "\END OF LEELA STDERR", file=sys.stderr)
 
         stats = {}
         move_list = []
@@ -405,7 +405,7 @@ class Leela(object):
 
         return stats, move_list
 
-    def analyze(self):
+    def analyze(self, additional_time=0):
         """
         Analyze current position with given time settings
         :return: tuple
@@ -416,13 +416,12 @@ class Leela(object):
             print(self.whose_turn() + " to play", file=sys.stderr)
             print(self.board_state(), file=sys.stderr)
 
-        # Set time for search
-        self.send_command('time_left black %d 1' % self.seconds_per_search)
-        self.send_command('time_left white %d 1' % self.seconds_per_search)
+        # Set time for search. Increased time if a mistake is detected
+        self.send_command('time_left black %d 1' % (self.seconds_per_search + additional_time))
+        self.send_command('time_left white %d 1' % (self.seconds_per_search + additional_time))
 
         # Generate next move
-        cmd = "genmove %s" % self.whose_turn()
-        self.write_to_stdin(p, cmd)
+        self.write_to_stdin(p, "genmove %s" % self.whose_turn())
 
         updated = 0
         stderr = []
@@ -463,7 +462,7 @@ class Leela(object):
 
             if 'best' in stats:
                 print("Best move: %s" % self.convert_position(stats['best']), file=sys.stderr)
-                print("Winrate: %f" % stats['winrate'], file=sys.stderr)
+                print("Winrate: %.2f%%" % (stats['winrate'] * 100), file=sys.stderr)
                 print("Visits: %d" % stats['visits'], file=sys.stderr)
 
         return stats, move_list
