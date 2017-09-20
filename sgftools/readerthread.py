@@ -36,7 +36,7 @@ class ReaderThread:
     def readline(self):
         """
         Read single line from queue
-        :return: output line
+        :return: str
         """
         try:
             line = self.queue.get_nowait()
@@ -47,7 +47,7 @@ class ReaderThread:
     def read_all_lines(self):
         """
         Read all lines from queue.
-        :return: output lines
+        :return: list
         """
         lines = []
 
@@ -60,19 +60,18 @@ class ReaderThread:
 
         return lines
 
-
 def start_reader_thread(fd):
     """
     Start file descriptor loop thread
     :param fd: stdout | stderr
     :return: ReaderThread
     """
-    reader_thread = ReaderThread(fd)
+    rt = ReaderThread(fd)
 
     def begin_loop():
-        reader_thread.loop()
+        rt.loop()
 
     t = Thread(target=begin_loop)
     t.start()
 
-    return reader_thread
+    return rt
