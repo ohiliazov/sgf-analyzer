@@ -378,14 +378,15 @@ class Leela(object):
         :return: tuple
         """
         p = self.p
-        if self.verbosity > 1:
-            print("Analyzing state:", file=sys.stderr)
-            print(self.whose_turn() + " to play", file=sys.stderr)
-            print(self.board_state(), file=sys.stderr)
 
         # Set time for search. Increased time if a mistake is detected
         self.send_command('time_left black %d 1' % seconds_per_search)
         self.send_command('time_left white %d 1' % seconds_per_search)
+
+        if self.verbosity > 1:
+            print("Analyzing state:", file=sys.stderr)
+            print(self.whose_turn() + " to play", file=sys.stderr)
+            print(self.board_state(), file=sys.stderr)
 
         # Generate next move
         self.write_to_stdin(p, "genmove %s" % self.whose_turn())
