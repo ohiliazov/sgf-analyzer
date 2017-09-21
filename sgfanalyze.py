@@ -1,4 +1,3 @@
-import argparse
 import hashlib
 import math
 import os
@@ -11,9 +10,6 @@ import config
 import sgftools.utils as utils
 from sgftools import gotools, annotations, progressbar, sgflib
 from sgftools.leela import Leela
-
-DEFAULT_STDEV = 0.22
-RESTART_COUNT = 1
 
 
 def add_moves_to_leela(cursor, leela):
@@ -145,13 +141,13 @@ def retry_analysis(fn):
 
 
 @retry_analysis
-def do_analyze(leela, base_dir, verbosity, additional_time=0):
+def do_analyze(leela, base_dir, verbosity, seconds_per_search):
     ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(leela.seconds_per_search) + "sec"
     ckpt_fn = os.path.join(base_dir, ckpt_hash)
     if verbosity > 2:
         print("Looking for checkpoint file: %s" % ckpt_fn, file=sys.stderr)
 
-    if os.path.exists(ckpt_fn) and not additional_time:
+    if os.path.exists(ckpt_fn):
         if verbosity > 1:
             print("Loading checkpoint file: %s" % ckpt_fn, file=sys.stderr)
         with open(ckpt_fn, 'rb') as ckpt_file:
@@ -160,7 +156,7 @@ def do_analyze(leela, base_dir, verbosity, additional_time=0):
     else:
         leela.reset()
         leela.go_to_position()
-        stats, move_list = leela.analyze(additional_time)
+        stats, move_list = leela.analyze(seconds_per_search)
         with open(ckpt_fn, 'wb') as ckpt_file:
             pickle.dump((stats, move_list), ckpt_file)
             ckpt_file.close()
@@ -228,7 +224,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
     def search(node):
         for mv in node["history"]:
             leela.add_move(leela.whose_turn(), mv)
-        stats, move_list = do_analyze(leela, base_dir, verbosity, config.settings['additional_time'])
+        stats, move_list = do_analyze(leela, base_dir, verbosity, args.variations_time)
         expand(node, stats, move_list)
 
         for mv in node["history"]:
@@ -330,58 +326,12 @@ def calculate_tasks_left(sgf, comment_requests_analyze, comment_requests_variati
     return analyze_tasks, variations_tasks
 
 
-default_analyze_thresh = 0.030
-default_var_thresh = 0.030
+default_analyze_thresh = 0.010
+default_var_thresh = 0.010
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
-    required = parser.add_argument_group('required named arguments')
-
-    parser.add_argument("SGF_FILE", help="SGF file to analyze")
-    parser.add_argument("--save_to_file", dest='save_to_file',
-                        help="File to save results of analyze, if skipped - use source filename with adding 'analyzed'")
-
-    required.add_argument('--leela', dest='executable', required=True, metavar="CMD",
-                          help="Command to run Leela executable")
-
-    parser.add_argument('--analyze-thresh', dest='analyze_threshold', default=default_analyze_thresh, type=float,
-                        metavar="T",
-                        help="Display analysis on moves losing approx at least this much win rate when the game is close (default=0.03)")
-    parser.add_argument('--var-thresh', dest='variations_threshold', default=default_var_thresh, type=float,
-                        metavar="T",
-                        help="Explore variations on moves losing approx at least this much win rate when the game is close (default=0.03)")
-    parser.add_argument('--secs-per-search', dest='seconds_per_search', default=10, type=float, metavar="S",
-                        help="How many seconds to use per search (default=10)")
-    parser.add_argument('--nodes-per-var', dest='nodes_per_variation', default=8, type=int, metavar="N",
-                        help="How many nodes to explore with leela in each variation tree (default=8)")
-    parser.add_argument('--num_to_show', dest='num_to_show', default=0, type=int,
-                        help="Number of moves to show from the sequence of suggested moves (default=0)")
-
-    parser.add_argument('--win-graph', dest='win_graph', action='store_true',
-                        help="Build pdf graph of win rate, must have matplotlib installed")
-    parser.add_argument('--wipe-comments', dest='wipe_comments', action='store_true',
-                        help="Remove existing comments from the main line of the SGF file")
-
-    parser.add_argument('--start', dest='analyze_start', default=0, type=int, metavar="MOVENUM",
-                        help="Analyze game starting at this move (default=0)")
-    parser.add_argument('--stop', dest='analyze_end', default=1000, type=int, metavar="MOVENUM",
-                        help="Analyze game stopping at this move (default=1000)")
-
-    parser.add_argument('-v', '--verbosity', default=0, type=int, metavar="V",
-                        help="Set the verbosity level, 0: progress only, 1: progress+status, 2: progress+status+state")
-
-    parser.add_argument('--cache', dest='ckpt_dir', metavar="DIR", default=os.path.expanduser('~/.leela_checkpoints'),
-                        help="Set a directory to cache partially complete analyses, default ~/.leela_checkpoints")
-    parser.add_argument('--restarts', default=2, type=int, metavar="N",
-                        help="If leela crashes, retry the analysis step this many times before reporting a failure")
-
-    parser.add_argument('--skip-white', dest='skip_white', action='store_true',
-                        help="Do not display analysis or explore variations for white mistakes")
-    parser.add_argument('--skip-black', dest='skip_black', action='store_true',
-                        help="Do not display analysis or explore variations for black mistakes")
-
-    args = parser.parse_args()
+    args = config.parser.parse_args()
     sgf_fn = args.SGF_FILE
 
     # if no file name to save analyze results provided - it will use original source file with concat 'analyzed'
@@ -389,7 +339,7 @@ if __name__ == '__main__':
         args.save_to_file = args.SGF_FILE.split('.')[0] + '_analyzed.sgf'
 
     if not os.path.exists(sgf_fn):
-        parser.error("No such file: %s" % (sgf_fn))
+        config.parser.error("No such file: %s" % (sgf_fn))
     sgf = gotools.import_sgf(sgf_fn)
 
     RESTART_COUNT = args.restarts
@@ -435,6 +385,7 @@ if __name__ == '__main__':
             if 'variations' in cursor.node['C'].data[0]:
                 comment_requests_variations[move_num] = True
 
+    # Wipe comments is needed
     if args.wipe_comments:
         cursor = sgf.cursor()
         cnode = cursor.node
@@ -507,7 +458,7 @@ if __name__ == '__main__':
         )
 
 
-    transform_winrate = winrate_transformer(DEFAULT_STDEV, args.verbosity)
+    transform_winrate = winrate_transformer(config.defaults['stdev'], args.verbosity)
     analyze_threshold = transform_winrate(0.5 + 0.5 * args.analyze_threshold) - \
                         transform_winrate(0.5 - 0.5 * args.analyze_threshold)
     variations_threshold = transform_winrate(0.5 + 0.5 * args.variations_threshold) - \
@@ -526,7 +477,7 @@ if __name__ == '__main__':
                   executable=args.executable,
                   is_handicap_game=is_handicap_game,
                   komi=komi,
-                  seconds_per_search=args.seconds_per_search,
+                  seconds_per_search=args.variations_time,
                   verbosity=args.verbosity)
 
     collected_winrates = {}
@@ -558,15 +509,7 @@ if __name__ == '__main__':
                     (move_num in comment_requests_variations) or
                     ((move_num - 1) in comment_requests_variations)):
 
-                stats, move_list = do_analyze(leela, base_dir, args.verbosity)
-
-                # Reanalyze with greater time if winrate drops lower than analyze_threshold
-                # if 'winrate' in stats and collected_winrates.keys():
-                #     print(stats['winrate'], collected_winrates[move_num - 1][1])
-                #
-                #     if stats['winrate'] <= collected_winrates[move_num - 1][1] - config.settings['analyze_threshold']:
-                #         stats, move_list = do_analyze(leela, base_dir, args.verbosity,
-                #                                       config.settings['additional_time'])
+                stats, move_list = do_analyze(leela, base_dir, args.verbosity, args.analyze_time)
 
                 if 'winrate' in stats and stats['visits'] > 100:
                     collected_winrates[move_num] = (current_player, stats['winrate'])

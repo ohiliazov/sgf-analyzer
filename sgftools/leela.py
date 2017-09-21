@@ -5,9 +5,7 @@ import hashlib
 from subprocess import Popen, PIPE
 import config
 import sgftools.readerthread as rt
-
-SGF_COORD = 'abcdefghijklmnopqrstuvwxy'
-BOARD_COORD = 'abcdefghjklmnopqrstuvwxyz'
+import sgftools.utils as utils
 
 update_regex = r'Nodes: ([0-9]+), ' \
                r'Win: ([0-9]+\.[0-9]+)\% \(MC:[0-9]+\.[0-9]+\%\/VN:[0-9]+\.[0-9]+\%\), ' \
@@ -15,18 +13,15 @@ update_regex = r'Nodes: ([0-9]+), ' \
 update_regex_no_vn = r'Nodes: ([0-9]+), ' \
                      r'Win: ([0-9]+\.[0-9]+)\%, ' \
                      r'PV:(( [A-Z][0-9]+)+)'
-
 status_regex = r'MC winrate=([0-9]+\.[0-9]+), ' \
                r'NN eval=([0-9]+\.[0-9]+), ' \
                r'score=([BW]\+[0-9]+\.[0-9]+)'
 status_regex_no_vn = r'MC winrate=([0-9]+\.[0-9]+), ' \
                      r'score=([BW]\+[0-9]+\.[0-9]+)'
-
 move_regex = r'^([A-Z][0-9]+) -> +([0-9]+) \(W: +(\-?[0-9]+\.[0-9]+)\%\) \(U: +(\-?[0-9]+\.[0-9]+)\%\) ' \
              r'\(V: +([0-9]+\.[0-9]+)\%: +([0-9]+)\) \(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'
 move_regex_no_vn = r'^([A-Z][0-9]+) -> +([0-9]+) \(U: +(\-?[0-9]+\.[0-9]+)\%\) \(R: +([0-9]+\.[0-9]+)\%: +([0-9]+)\) ' \
                    r'\(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'
-
 best_regex = r'([0-9]+) visits, score (\-? ?[0-9]+\.[0-9]+)\% \(from \-? ?[0-9]+\.[0-9]+\%\) PV: (.*)'
 stats_regex = r'([0-9]+) visits, ([0-9]+) nodes(?:, ([0-9]+) playouts)(?:, ([0-9]+) p/s)'
 bookmove_regex = r'([0-9]+) book moves, ([0-9]+) total positions'
@@ -51,34 +46,6 @@ class Leela(object):
         self.stderr_thread = None
         self.history = []
 
-    def convert_position(self, pos):
-        """
-        Convert SGF coordinates to board position coordinates
-        Example aa -> A1, qq -> P15
-        :param pos: string
-        :return: string
-        """
-        x = BOARD_COORD[SGF_COORD.index(pos[0])].upper()
-        y = self.board_size - SGF_COORD.index(pos[1])
-
-        return '%s%d' % (x, y)
-
-    def parse_position(self, pos):
-        """
-        Convert board position coordinates to SGF coordinates
-        Example A1 -> aa, P15 -> qq
-        :param pos: string
-        :return: string
-        """
-        # Pass moves are the empty string in sgf files
-        if pos == "pass":
-            return ""
-
-        x = BOARD_COORD.index(pos[0].lower())
-        y = self.board_size - int(pos[1:])
-
-        return "%s%s" % (SGF_COORD[x], SGF_COORD[y])
-
     def history_hash(self):
         """
         Return hash for checkpoint filename
@@ -98,7 +65,7 @@ class Leela(object):
         :param color: str
         :param pos: str
         """
-        move = 'pass' if pos in ['', 'tt'] else self.convert_position(pos)
+        move = 'pass' if pos in ['', 'tt'] else utils.convert_position(self.board_size, pos)
         cmd = "play %s %s" % (color, move)
         self.history.append(cmd)
 
@@ -134,7 +101,7 @@ class Leela(object):
             visits = int(m.group(1))
             winrate = self.to_fraction(m.group(2))
             seq = m.group(3)
-            seq = [self.parse_position(p) for p in seq.split()]
+            seq = [utils.parse_position(self.board_size, p) for p in seq.split()]
 
             return {'visits': visits, 'winrate': winrate, 'seq': seq}
         return {}
@@ -318,14 +285,14 @@ class Leela(object):
             # Find move string
             m = re.match(move_regex, line)
             if m is not None:
-                pos = self.parse_position(m.group(1))
+                pos = utils.parse_position(self.board_size, m.group(1))
                 visits = int(m.group(2))
                 winrate = flip_winrate(self.to_fraction(m.group(3)))
                 mc_winrate = flip_winrate(self.to_fraction(m.group(4)))
                 nn_winrate = flip_winrate(self.to_fraction(m.group(5)))
                 nn_count = int(m.group(6))
                 policy_prob = self.to_fraction(m.group(7))
-                pv = [self.parse_position(p) for p in m.group(8).split()]
+                pv = [utils.parse_position(self.board_size, p) for p in m.group(8).split()]
 
                 info = {
                     'pos': pos,
@@ -341,14 +308,14 @@ class Leela(object):
 
             m = re.match(move_regex_no_vn, line)
             if m is not None:
-                pos = self.parse_position(m.group(1))
+                pos = utils.parse_position(self.board_size, m.group(1))
                 visits = int(m.group(2))
                 mc_winrate = flip_winrate(self.to_fraction(m.group(3)))
                 r_winrate = flip_winrate(self.to_fraction(m.group(4)))
                 r_count = int(m.group(5))
                 policy_prob = self.to_fraction(m.group(6))
                 pv = m.group(7)
-                pv = [self.parse_position(p) for p in pv.split()]
+                pv = [utils.parse_position(self.board_size, p) for p in pv.split()]
 
                 info = {
                     'pos': pos,
@@ -367,7 +334,7 @@ class Leela(object):
 
                 # Parse best move and its winrate
                 if m is not None:
-                    stats['best'] = self.parse_position(m.group(3).split()[0])
+                    stats['best'] = utils.parse_position(self.board_size, m.group(3).split()[0])
                     stats['winrate'] = flip_winrate(self.to_fraction(m.group(2)))
 
                 # Parse number of visits to stats
@@ -381,7 +348,7 @@ class Leela(object):
 
         # Add chosen move to stats
         if m is not None:
-            stats['chosen'] = "resign" if m.group(1) == "resign" else self.parse_position(m.group(1))
+            stats['chosen'] = "resign" if m.group(1) == "resign" else utils.parse_position(self.board_size, m.group(1))
 
         # Add book move to move list
         if 'bookmoves' in stats and len(move_list) == 0:
@@ -405,9 +372,9 @@ class Leela(object):
 
         return stats, move_list
 
-    def analyze(self, additional_time=0):
+    def analyze(self, seconds_per_search):
         """
-        Analyze current position with given time settings
+        Analyze current position with given seconds per search
         :return: tuple
         """
         p = self.p
@@ -417,8 +384,8 @@ class Leela(object):
             print(self.board_state(), file=sys.stderr)
 
         # Set time for search. Increased time if a mistake is detected
-        self.send_command('time_left black %d 1' % (self.seconds_per_search + additional_time))
-        self.send_command('time_left white %d 1' % (self.seconds_per_search + additional_time))
+        self.send_command('time_left black %d 1' % seconds_per_search)
+        self.send_command('time_left white %d 1' % seconds_per_search)
 
         # Generate next move
         self.write_to_stdin(p, "genmove %s" % self.whose_turn())
@@ -458,10 +425,10 @@ class Leela(object):
         stats, move_list = self.parse(stdout, stderr)
 
         if self.verbosity > 0:
-            print("Chosen move: %s" % self.convert_position(stats['chosen']), file=sys.stderr)
+            print("Chosen move: %s" % utils.convert_position(self.board_size, stats['chosen']), file=sys.stderr)
 
             if 'best' in stats:
-                print("Best move: %s" % self.convert_position(stats['best']), file=sys.stderr)
+                print("Best move: %s" % utils.convert_position(self.board_size, stats['best']), file=sys.stderr)
                 print("Winrate: %.2f%%" % (stats['winrate'] * 100), file=sys.stderr)
                 print("Visits: %d" % stats['visits'], file=sys.stderr)
 
