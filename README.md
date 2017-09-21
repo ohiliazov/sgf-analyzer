@@ -56,16 +56,16 @@ ___
    - [ ] support Ray bot (in progress) 
    - [ ] code refactoring (in progress) 
    - [ ] add documentation (in progress) 
-   - [x] tune performance between leela calls
-   - [x] support/clean-up non english characters (bug)
    - [ ] show even branches
    - [ ] add params to stop analysis if win rate drops > ~80%
+   - [ ] add logger
+   - [x] tune performance between leela calls
+   - [x] support/clean-up non english characters (bug)
    - [x] update pdf graph output to have better look
    - [x] write to file during analysis
    - [x] write to file with Python 3 instead of console
    - [x] add limitation to show suggested moves
    - [x] add config file
-   - [ ] add logger
    - [x] divided time for move and variations analysis
 
 ___
