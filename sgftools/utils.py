@@ -8,11 +8,7 @@ BOARD_COORD = 'abcdefghjklmnopqrstuvwxyz'  # without "i"
 
 def write_to_file(filename, mode, content):
     """
-    Writes sgf to file
-    :param filename: 
-    :param mode: 
-    :param content: 
-    :return: 
+    Writes SGF to file
     """
     with open(filename, mode, encoding='utf-8') as f:
         f.write(str(content))
@@ -21,13 +17,9 @@ def write_to_file(filename, mode, content):
 def convert_position(board_size, pos):
     """
     Convert SGF coordinates to board position coordinates
-    Example aa -> a1, qq -> p15
-    :param pos: string
-    :param board_size: int
-
-    :return: string
+    Example aa -> A1, qq -> P15
     """
-    x = BOARD_COORD[SGF_COORD.index(pos[0])]
+    x = BOARD_COORD[SGF_COORD.index(pos[0])].upper()
     y = board_size - SGF_COORD.index(pos[1])
 
     return '%s%d' % (x, y)
@@ -37,9 +29,6 @@ def parse_position(board_size, pos):
     """
     Convert board position coordinates to SGF coordinates
     Example A1 -> aa, P15 -> qq
-    :param pos: string
-    :param board_size: int
-
     :return: string
     """
     # Pass moves are the empty string in sgf files
