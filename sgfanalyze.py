@@ -142,7 +142,7 @@ def retry_analysis(fn):
 
 @retry_analysis
 def do_analyze(leela, base_dir, verbosity, seconds_per_search):
-    ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(leela.seconds_per_search) + "sec"
+    ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(seconds_per_search) + "sec"
     ckpt_fn = os.path.join(base_dir, ckpt_hash)
     if verbosity > 2:
         print("Looking for checkpoint file: %s" % ckpt_fn, file=sys.stderr)
@@ -477,7 +477,7 @@ if __name__ == '__main__':
                   executable=args.executable,
                   is_handicap_game=is_handicap_game,
                   komi=komi,
-                  seconds_per_search=args.variations_time,
+                  seconds_per_search=args.analyze_time,
                   verbosity=args.verbosity)
 
     collected_winrates = {}
