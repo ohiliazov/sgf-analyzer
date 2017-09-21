@@ -51,7 +51,7 @@ ___
 
 ### TODO list:
 
-   - [ ] clean-up suggested variations with low visits rate
+   - [x] clean-up suggested variations with low visits rate
    - [ ] mark by A-B alternatives which has low difference
    - [ ] support Ray bot (in progress) 
    - [ ] code refactoring (in progress) 

@@ -257,6 +257,16 @@ class Leela(object):
         def flip_winrate(wr):
             return (1.0 - wr) if self.whose_turn() == "white" else wr
 
+        # function filter given list of moves by criteria or win-rate and visits
+        def filter_redundant_moves(move_list, stats):
+
+            best_move_visits = stats['visits']
+            best_move_winrate = stats['winrate']
+
+            return list(filter(lambda move:
+                               (best_move_winrate - move['winrate']) < 0.1
+                               and (best_move_visits / move['visits']) < 20, move_list))
+
         finished = False
         summarized = False
         for line in stderr:
@@ -365,6 +375,8 @@ class Leela(object):
                                key=(lambda key: 1000000000000000 if info['pos'] == stats['best'] else info['visits']),
                                reverse=True)
             move_list = [info for (i, info) in enumerate(move_list) if i == 0 or info['visits'] > 0]
+
+            move_list = filter_redundant_moves(move_list, stats)
 
             # In the case where Leela resigns, just replace with the move Leela did think was best
             if stats['chosen'] == "resign":
