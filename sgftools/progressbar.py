@@ -2,6 +2,7 @@ import sys
 import datetime
 import time
 
+
 class ProgressBar(object):
     def __init__(self, min_value=0, max_value=100, width=50, frequency=1, stream=sys.stderr):
         self.max_value = max_value

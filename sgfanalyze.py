@@ -295,7 +295,8 @@ if __name__ == '__main__':
     if board_size != 19:
         print("Warning: board size is not 19 so Leela could be much weaker and less accurate", file=sys.stderr)
 
-        if args.analyze_threshold == default_analyze_thresh or args.variations_threshold == default_var_thresh:
+        if args.analyze_threshold == config.defaults['analyze_threshold'] \
+                or args.variations_threshold == config.defaults['variations_threshold']:
             print("Warning: Consider also setting --analyze-thresh and --var-thresh higher", file=sys.stderr)
 
     # Set handicap stones count
@@ -350,6 +351,7 @@ if __name__ == '__main__':
             if args.wipe_comments:
                 node_comment.data[0] = ""
 
+    # Calculate initial tasks
     (analyze_tasks_initial, variations_tasks_initial) = calculate_tasks_left(sgf, comment_requests_analyze,
                                                                              comment_requests_variations)
     variations_task_probability = 1.0 / (1.0 + args.variations_threshold * 100.0)
