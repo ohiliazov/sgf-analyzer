@@ -567,6 +567,7 @@ if __name__ == '__main__':
                                                                                                prev_move_list,
                                                                                                this_move)
                         cursor.previous()
+                        # adding comment to sgf with suggested alternative variations
                         annotations.annotate_sgf(cursor, analysis_comment, lb_values, tr_values)
                         cursor.next()
 
