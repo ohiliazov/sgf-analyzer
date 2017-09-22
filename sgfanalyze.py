@@ -6,6 +6,7 @@ import sys
 import time
 import traceback
 import config
+import datetime
 
 import sgftools.utils as utils
 from sgftools import gotools, annotations, progressbar, sgflib
@@ -331,7 +332,13 @@ default_var_thresh = 0.010
 
 if __name__ == '__main__':
 
+    time_start = datetime.datetime.now()
+
     args = config.parser.parse_args()
+
+    if args.verbosity > 0:
+        print("Leela analysis started at %s" % time_start, file=sys.stderr)
+
     sgf_fn = args.SGF_FILE
 
     # if no file name to save analyze results provided - it will use original source file with concat 'analyzed'
@@ -638,6 +645,12 @@ if __name__ == '__main__':
 
     # Save final results into file
     utils.write_to_file(args.save_to_file, 'w', sgf)
+
+    time_stop = datetime.datetime.now()
+
+    if args.verbosity > 0:
+        print("Leela analysis stopped at %s" % time_stop, file=sys.stderr)
+        print("Analysis time: %s" % (time_stop-time_start), file=sys.stderr)
 
     # delay in case of sequential running of several analysis
     time.sleep(1)
