@@ -224,6 +224,18 @@ class Leela(object):
         """
         self.send_command('clear_board')
 
+    def save_sgf(self, sgf_fn):
+        """
+        Save sgf to checkpoint file
+        """
+        self.send_command('printsgf %s' % sgf_fn)
+
+    def load_sgf(self, sgf_fn):
+        """
+        Load sgf from checkpoint file
+        """
+        self.send_command('loadsgf %s' % sgf_fn)
+
     def board_state(self):
         """
         Show board
@@ -234,7 +246,7 @@ class Leela(object):
 
     def go_to_position(self):
         """
-        Send all moves from history to Ray
+        Send all moves from history to Leela
         """
         count = len(self.history)
         cmd = "\n".join(self.history)

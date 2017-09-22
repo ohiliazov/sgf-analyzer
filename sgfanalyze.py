@@ -36,96 +36,6 @@ def add_moves_to_leela(cursor, leela):
     return this_move
 
 
-# Make a function that applies a transform to the winrate that stretches out the middle range and squashes the extreme ranges,
-# to make it a more linear function and suppress Leela's suggestions in won/lost games.
-# Currently, the CDF of the probability distribution from 0 to 1 given by x^k * (1-x)^k,
-# where k is set to be the value such that the stdev of the distribution is stdev.
-def winrate_transformer(stdev, verbosity):
-    # Variance of the distribution =
-    # = The integral from 0 to 1 of (x-0.5)^2 x^k (1-x)^k dx
-    # = (via integration by parts)  (k+2)!k! / (2k+3)! - (k+1)!k! / (2k+2)! + (1/4) * k!^2 / (2k+1)!
-    #
-    # Normalize probability by dividing by the integral from 0 to 1 of x^k (1-x)^k dx :
-    # k!^2 / (2k+1)!
-    # And we get:
-    # (k+1)(k+2) / (2k+2) / (2k+3) - (k+1) / (2k+2) + (1/4)
-    # OR 0.25 - (k ** 2 + 2 * k + 1) / (2 * k ** 2 + 5 * k + 3) / 2
-    def variance(k):
-        """
-        Variance of the distribution
-        :param k: 0 <= k <= 1
-        :return: float
-        """
-        k = float(k)
-        return 0.25 - (k ** 2 + 2 * k + 1) / (2 * k ** 2 + 5 * k + 3) / 2
-
-    def find_k(lower, upper):
-        """
-        Perform binary search to find the appropriate k
-        :param lower: float
-        :param upper: float
-        :return: float
-        """
-        while True:
-            mid = 0.5 * (lower + upper)
-            if mid == lower or mid == upper or lower >= upper:
-                return mid
-            var = variance(mid)
-            if var < stdev * stdev:
-                upper = mid
-            else:
-                lower = mid
-
-    if stdev * stdev <= 1e-10:
-        raise ValueError("Stdev too small, please choose a more reasonable value")
-
-    # Repeated doubling to find an upper bound big enough
-    upper = 1
-    while variance(upper) > stdev * stdev:
-        upper = upper * 2
-
-    k = find_k(0, upper)
-
-    if verbosity > 2:
-        print("Using k=%f, stdev=%f" % (k, math.sqrt(variance(k))), file=sys.stderr)
-
-    def unnormpdf(x):
-        """
-        Unnormalize probability density function
-        :param x:
-        :return:
-        """
-        if x <= 0 or x >= 1:
-            return 0
-        a = math.log(x)
-        b = math.log(1 - x)
-        logprob = a * k + b * k
-        # Constant scaling so we don't overflow floats with crazy values
-        logprob = logprob - 2 * k * math.log(0.5)
-        return math.exp(logprob)
-
-    # Precompute a big array to approximate the CDF
-    n = 100000
-    lookup = [unnormpdf(float(x) / float(n)) for x in range(n + 1)]
-    cum = 0
-
-    for i in range(n + 1):
-        cum += lookup[i]
-        lookup[i] = cum
-
-    for i in range(n + 1):
-        lookup[i] = lookup[i] / lookup[n]
-
-    def cdf(x):
-        i = int(math.floor(x * n))
-        if i >= n or i < 0:
-            return x
-        excess = x * n - i
-        return lookup[i] + excess * (lookup[i + 1] - lookup[i])
-
-    return lambda x: cdf(x)
-
-
 def retry_analysis(fn):
     global RESTART_COUNT
 
@@ -467,11 +377,14 @@ if __name__ == '__main__':
         )
 
 
-    transform_winrate = winrate_transformer(config.defaults['stdev'], args.verbosity)
+    transform_winrate = utils.winrate_transformer(config.defaults['stdev'], args.verbosity)
+
     analyze_threshold = transform_winrate(0.5 + 0.5 * args.analyze_threshold) - \
                         transform_winrate(0.5 - 0.5 * args.analyze_threshold)
+
     variations_threshold = transform_winrate(0.5 + 0.5 * args.variations_threshold) - \
                            transform_winrate(0.5 - 0.5 * args.variations_threshold)
+
     print("Executing approx %.0f analysis steps" % approx_tasks_max(), file=sys.stderr)
 
     progress_bar = progressbar.ProgressBar(max_value=approx_tasks_max())
