@@ -232,7 +232,7 @@ class Leela(object):
 
     def load_sgf(self, sgf_fn):
         """
-        Load sgf from checkpoint file
+        Load sgf from given file
         """
         self.send_command('loadsgf %s' % sgf_fn)
 
