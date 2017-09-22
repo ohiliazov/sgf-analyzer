@@ -283,18 +283,51 @@ if __name__ == '__main__':
     # Set up SGF cursor
     cursor = sgf.cursor()
 
+    # Get initial nodes
+    node_boardsize = cursor.node.get('SZ')
+    node_handicap = cursor.node.get('HA')
+    node_rules = cursor.node.get('RU')
+    node_komi = cursor.node.get('KM')
+
     # Set board size
-    board_size = int(cursor.node.get('SZ').data[0]) if cursor.node.get('SZ') else 19
+    board_size = int(node_boardsize.data[0]) if node_boardsize else 19
 
     if board_size != 19:
         print("Warning: board size is not 19 so Leela could be much weaker and less accurate", file=sys.stderr)
 
-        if args.analyze_threshold == default_analyze_thresh or args.variations_threshold == default_var_thresh:
+        if args.analyze_threshold == config.defaults['analyze_threshold'] \
+                or args.variations_threshold == config.defaults['variations_threshold']:
             print("Warning: Consider also setting --analyze-thresh and --var-thresh higher", file=sys.stderr)
 
-    move_num = -1
+    # Set handicap stones count
+    if node_handicap and int(node_handicap.data[0]) > 1:
+        handicap_stone_count = int(node_handicap.data[0])
+    else:
+        handicap_stone_count = 0
 
-    # First loop for comments
+    is_handicap_game = bool(handicap_stone_count)
+
+    # Set rules
+    is_japanese_rules = node_rules and node_rules.data[0].lower() in ['jp', 'japanese', 'japan']
+
+    # Set komi
+    if node_komi:
+        komi = float(node_komi.data[0])
+
+        if is_handicap_game and is_japanese_rules:
+            old_komi = komi
+            komi = old_komi + handicap_stone_count
+            print("Adjusting komi from %.1f to %.1f in converting Japanese rules with %d handicap to Chinese rules" % (
+                old_komi, komi, handicap_stone_count), file=sys.stderr)
+    else:
+        if is_handicap_game:
+            komi = 0.5
+        else:
+            komi = 6.5 if is_japanese_rules else 7.5
+        print("Warning: Komi not specified, assuming %.1f" % komi, file=sys.stderr)
+
+    # First loop for comments parsing
+    move_num = -1
     while not cursor.atEnd:
 
         # Go to next node and increment move_num
@@ -318,40 +351,7 @@ if __name__ == '__main__':
             if args.wipe_comments:
                 node_comment.data[0] = ""
 
-    cursor = sgf.cursor()
-    is_handicap_game = False
-    handicap_stone_count = 0
-
-    if 'HA' in cursor.node.keys() and int(cursor.node['HA'].data[0]) > 1:
-        is_handicap_game = True
-        handicap_stone_count = int(cursor.node['HA'].data[0])
-
-    is_japanese_rules = False
-    komi = 7.5
-
-    if 'RU' in cursor.node.keys():
-        rules = cursor.node['RU'].data[0].lower()
-        is_japanese_rules = (rules == 'jp' or rules == 'japanese' or rules == 'japan')
-        komi = 6.5
-
-    if 'KM' in cursor.node.keys():
-        komi = float(cursor.node['KM'].data[0])
-
-        if is_handicap_game and is_japanese_rules:
-            old_komi = komi
-            komi = old_komi + handicap_stone_count
-            print("Adjusting komi from %f to %f in converting Japanese rules with %d handicap to Chinese rules" % (
-                old_komi, komi, handicap_stone_count), file=sys.stderr)
-
-        # fix issue when komi is not set in given sgf, for example from Fox server
-        if komi == 0 and not is_handicap_game:
-            komi = 6.5
-
-    else:
-        if is_handicap_game:
-            komi = 0.5
-        print("Warning: Komi not specified, assuming %f" % komi, file=sys.stderr)
-
+    # Calculate initial tasks
     (analyze_tasks_initial, variations_tasks_initial) = calculate_tasks_left(sgf, comment_requests_analyze,
                                                                              comment_requests_variations)
     variations_task_probability = 1.0 / (1.0 + args.variations_threshold * 100.0)
@@ -565,7 +565,7 @@ if __name__ == '__main__':
 
     if args.verbosity > 0:
         print("Leela analysis stopped at %s" % time_stop, file=sys.stderr)
-        print("Elapsed time: %s" % (time_stop-time_start), file=sys.stderr)
+        print("Elapsed time: %s" % (time_stop - time_start), file=sys.stderr)
 
     # delay in case of sequential running of several analysis
     time.sleep(1)
