@@ -109,12 +109,22 @@ def join_list_into_str(list_to_join, separator):
 
 def winrate_transformer(stdev, verbosity):
     """
-    Stretch winrate out the middle range and squashe the extreme ranges
+    Make a function that applies a transform to the winrate that stretches out the middle
+    range and squashes the extreme ranges, to make it a more linear function and suppress
+    Leela's suggestions in won/lost games.
+    Currently, the CDF of the probability distribution from 0 to 1 given by x^k * (1-x)^k,
+    where k is set to be the value such that the stdev of the distribution is stdev.
     :return: winrate
     """
+
     def variance(k):
         """
-        Variance of the distribution
+        Variance of the distribution =
+        = The integral from 0 to 1 of (x-0.5)^2 x^k (1-x)^k dx
+        = (via integration by parts)  (k+2)!k! / (2k+3)! - (k+1)!k! / (2k+2)! + (1/4) * k!^2 / (2k+1)!
+
+        Normalize probability by dividing by the integral from 0 to 1 of x^k (1-x)^k dx: k!^2 / (2k+1)!
+        And we get:	 (k+1) * (k+2) / (2k+2) / (2k+3) - (k+1) / (2k+2) + (1/4)
         :param k: 0 <= k <= 1
         """
         k = float(k)
@@ -173,6 +183,9 @@ def winrate_transformer(stdev, verbosity):
         lookup[i] = lookup[i] / lookup[n]
 
     def cdf(x):
+        """
+        Cumulative distribution function
+        """
         i = int(math.floor(x * n))
         if i >= n or i < 0:
             return x

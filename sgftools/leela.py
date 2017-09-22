@@ -226,7 +226,7 @@ class Leela(object):
 
     def save_sgf(self, sgf_fn):
         """
-        Save sgf to checkpoint file
+        Save sgf to given filename
         """
         self.send_command('printsgf %s' % sgf_fn)
 

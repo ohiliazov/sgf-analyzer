@@ -1,15 +1,16 @@
+import datetime
 import hashlib
-import math
 import os
 import pickle
+import re
 import sys
 import time
 import traceback
-import config
-import datetime
 
+import config
 import sgftools.utils as utils
 from sgftools import gotools, annotations, progressbar, sgflib
+from sgftools import regex
 from sgftools.leela import Leela
 
 
@@ -255,6 +256,7 @@ if __name__ == '__main__':
 
     # if no file name to save analyze results provided - it will use original source file with concat 'analyzed'
     if not args.save_to_file:
+        # FIXME: possible bug with folders which contain "." in their names
         args.save_to_file = args.SGF_FILE.split('.')[0] + '_analyzed.sgf'
 
     if not os.path.exists(sgf_fn):
@@ -275,14 +277,14 @@ if __name__ == '__main__':
     if args.verbosity > 1:
         print("Checkpoint dir: %s" % base_dir, file=sys.stderr)
 
-    comment_requests_analyze = {}
-    comment_requests_variations = {}
+    comment_requests_analyze = {}  # will contain move numbers that should be analyzed
+    comment_requests_variations = {}  # will contain move numbers that should be analyzed with variations
+
+    # Set up SGF cursor
     cursor = sgf.cursor()
 
-    if 'SZ' in cursor.node.keys():
-        board_size = int(cursor.node['SZ'].data[0])
-    else:
-        board_size = 19
+    # Set board size
+    board_size = int(cursor.node.get('SZ').data[0]) if cursor.node.get('SZ') else 19
 
     if board_size != 19:
         print("Warning: board size is not 19 so Leela could be much weaker and less accurate", file=sys.stderr)
@@ -291,33 +293,30 @@ if __name__ == '__main__':
             print("Warning: Consider also setting --analyze-thresh and --var-thresh higher", file=sys.stderr)
 
     move_num = -1
-    cursor = sgf.cursor()
 
+    # First loop for comments
     while not cursor.atEnd:
+
+        # Go to next node and increment move_num
         cursor.next()
         move_num += 1
 
-        if 'C' in cursor.node.keys():
-            if 'analyze' in cursor.node['C'].data[0]:
+        node_comment = cursor.node.get('C')
+
+        # Store moves, requested for analysis and variations
+        if node_comment:
+            match = re.match(regex.comment_regex, node_comment.data[0])
+
+            if 'analyze' in match.group('node_comment'):
                 comment_requests_analyze[move_num] = True
 
-            if 'variations' in cursor.node['C'].data[0]:
+            if 'variations' in match.group('node_comment'):
+                comment_requests_analyze[move_num] = True
                 comment_requests_variations[move_num] = True
 
-    # Wipe comments is needed
-    if args.wipe_comments:
-        cursor = sgf.cursor()
-        cnode = cursor.node
-
-        if cnode.has_key('C'):
-            cnode['C'].data[0] = ""
-
-        while not cursor.atEnd:
-            cursor.next()
-            cnode = cursor.node
-
-            if cnode.has_key('C'):
-                cnode['C'].data[0] = ""
+            # Wipe comments is needed
+            if args.wipe_comments:
+                node_comment.data[0] = ""
 
     cursor = sgf.cursor()
     is_handicap_game = False
