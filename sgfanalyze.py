@@ -338,6 +338,8 @@ if __name__ == '__main__':
 
     if args.verbosity > 0:
         print("Leela analysis started at %s" % time_start, file=sys.stderr)
+        print("Game moves analysis: %d seconds per move" % args.analyze_time, file=sys.stderr)
+        print("Variations analysis: %d seconds per move" % args.variations_time, file=sys.stderr)
 
     sgf_fn = args.SGF_FILE
 
@@ -650,7 +652,7 @@ if __name__ == '__main__':
 
     if args.verbosity > 0:
         print("Leela analysis stopped at %s" % time_stop, file=sys.stderr)
-        print("Analysis time: %s" % (time_stop-time_start), file=sys.stderr)
+        print("Elapsed time: %s" % (time_stop-time_start), file=sys.stderr)
 
     # delay in case of sequential running of several analysis
     time.sleep(1)
