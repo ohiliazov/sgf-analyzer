@@ -32,7 +32,9 @@ def calculate_tasks_left(sgf_file, request_analyze, request_variations):
             vars_tasks += 1
 
         # If analyze task requested in comments
-        elif move_number in request_analyze or (move_number - 1) in request_analyze:
+        elif move_number in request_analyze or \
+                        (move_number - 1) in request_analyze or \
+                        (move_number - 1) in request_variations:
             analyze_tasks += 1
 
         # Default analysis
@@ -55,7 +57,7 @@ def add_moves_to_leela(cursor, leela):
     # Store commands to add black or white moves
     if node_black_move:
         this_move = node_black_move.data[0]
-        leela.add_move('white', this_move)
+        leela.add_move('black', this_move)
 
     if node_white_move:
         this_move = node_white_move.data[0]
@@ -71,6 +73,31 @@ def add_moves_to_leela(cursor, leela):
             leela.add_move('white', move)
 
     return this_move
+
+
+def do_analyze(leela, base_dir, seconds_per_search):
+    ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(seconds_per_search) + "sec"
+    ckpt_fn = os.path.join(base_dir, ckpt_hash)
+
+    if args.verbosity > 2:
+        print("Looking for checkpoint file: %s" % ckpt_fn, file=sys.stderr)
+
+    if os.path.exists(ckpt_fn):
+        if args.verbosity > 2:
+            print("Loading checkpoint file: %s" % ckpt_fn, file=sys.stderr)
+
+        with open(ckpt_fn, 'rb') as ckpt_file:
+            stats, move_list = pickle.load(ckpt_file)
+            ckpt_file.close()
+    else:
+        leela.reset()
+        leela.go_to_position()
+        stats, move_list = leela.analyze(seconds_per_search)
+        with open(ckpt_fn, 'wb') as ckpt_file:
+            pickle.dump((stats, move_list), ckpt_file)
+            ckpt_file.close()
+
+    return stats, move_list
 
 
 if __name__ == '__main__':
@@ -257,6 +284,57 @@ if __name__ == '__main__':
         # Start Leela process
         leela.start()
         add_moves_to_leela(cursor, leela)
+
+        # Analyze main line, collect winrates
+        while not cursor.atEnd:
+            cursor.next()
+            move_num += 1
+
+            # Add played move to history
+            this_move = add_moves_to_leela(cursor, leela)
+
+            # Get current player color
+            current_player = leela.whose_turn()
+            prev_player = "white" if current_player == "black" else "black"
+
+            # Booleans
+            is_default_analysis = args.analyze_start <= move_num <= args.analyze_end
+            is_analyze_request = any(move in comment_requests_analyze for move in [move_num, move_num - 1])
+            is_vars_request = any(move in comment_requests_variations for move in [move_num, move_num - 1])
+
+            if is_default_analysis or is_analyze_request or is_vars_request:
+                stats, move_list = do_analyze(leela, base_dir, args.analyze_time)
+
+                # Store winrate of black player after played move
+                if 'winrate' in stats and stats['visits'] > 100:
+                    collected_winrates[move_num] = (current_player, stats['winrate'])
+
+                # Store best move winrate
+                if len(move_list) > 0 and 'winrate' in move_list[0]:
+                    collected_best_moves[move_num] = move_list[0]['pos']
+                    collected_best_move_winrates[move_num] = move_list[0]['winrate']
+
+                delta = 0.0
+                transdelta = 0.0
+
+                # If winrate of current and previous moves exist, calculate delta
+                if 'winrate' in stats and (move_num - 1) in collected_best_moves:
+                    # Calculate delta and transdelta if played move is not Leela's "best move"
+                    if this_move != collected_best_moves[move_num - 1]:
+                        delta = stats['winrate'] - collected_best_move_winrates[move_num - 1]
+                        delta = min(0.0, (-delta if leela.whose_turn() == "black" else delta))  # adjust delta <= 0
+                        transdelta = transform_winrate(stats['winrate']) - \
+                                     transform_winrate(collected_best_move_winrates[move_num - 1])
+                        transdelta = min(0.0, (-transdelta if leela.whose_turn() == "black" else transdelta))
+
+                    if transdelta <= -analyze_threshold:
+                        print(transdelta)
+                        (delta_comment, delta_lb_values) = annotations.format_delta_info(delta, transdelta, stats,
+                                                                                         this_move, board_size)
+                        annotations.annotate_sgf(cursor, delta_comment, delta_lb_values, [])
+
+            utils.write_to_file(args.save_to_file, 'w', sgf)
+
     except:
         traceback.print_exc()
         print("Failure, reporting partial results...", file=sys.stderr)

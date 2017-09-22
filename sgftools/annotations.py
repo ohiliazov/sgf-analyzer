@@ -68,26 +68,31 @@ def format_winrate(stats, move_list, board_size, next_game_move):
 def format_delta_info(delta, trans_delta, stats, this_move, board_size):
     comment = ""
     LB_values = []
-    if trans_delta <= -0.200:
-        comment += "==========================\n"
-        comment += "Big Mistake? (%s) (delta %.2f%%)\n" % (format_pos(this_move, board_size), delta * 100)
-        comment += "==========================\n"
+    if trans_delta <= -0.2:
+        comment += "=================================\n"
+        comment += "Leela thinks %s is a big mistake!\n" % format_pos(this_move, board_size)
+        comment += "Winning percentage drops by %.2f%%!\n" % (-delta * 100)
+        comment += "=================================\n"
         if not pos_is_pass(this_move):
             LB_values.append("%s:%s" % (this_move, "?"))
-    elif trans_delta <= -0.075:
-        comment += "==========================\n"
-        comment += "Mistake? (%s) (delta %.2f%%)\n" % (format_pos(this_move, board_size), delta * 100)
-        comment += "==========================\n"
+    elif trans_delta <= -0.1:
+        comment += "=================================\n"
+        comment += "Leela thinks %s is a mistake!\n" % format_pos(this_move, board_size)
+        comment += "Winning percentage drops by %.2f%%\n" % (-delta * 100)
+        comment += "=================================\n"
         if not pos_is_pass(this_move):
             LB_values.append("%s:%s" % (this_move, "?"))
-    elif trans_delta <= -0.040:
-        comment += "==========================\n"
-        comment += "Inaccuracy? (%s) (delta %.2f%%)\n" % (format_pos(this_move, board_size), delta * 100)
-        comment += "==========================\n"
+    elif trans_delta <= -0.05:
+        comment += "=================================\n"
+        comment += "Leela thinks %s is not the best choice.\n" % format_pos(this_move, board_size)
+        comment += "Winning percentage drops by %.2f%%\n" % (-delta * 100)
+        comment += "=================================\n"
         if not pos_is_pass(this_move):
             LB_values.append("%s:%s" % (this_move, "?"))
-    elif trans_delta <= -0.005:
-        comment += "Leela slightly dislikes %s (delta %.2f%%).\n" % (format_pos(this_move, board_size), delta * 100)
+    elif trans_delta <= -0.025:
+        comment += "=================================\n"
+        comment += "Leela slightly dislikes %s.\n" % format_pos(this_move, board_size)
+        comment += "=================================\n"
 
     comment += "\n"
     return comment, LB_values
