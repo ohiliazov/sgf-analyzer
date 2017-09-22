@@ -1,14 +1,16 @@
+import datetime
 import hashlib
-import math
 import os
 import pickle
+import re
 import sys
 import time
 import traceback
-import config
 
+import config
 import sgftools.utils as utils
 from sgftools import gotools, annotations, progressbar, sgflib
+from sgftools import regex
 from sgftools.leela import Leela
 
 
@@ -33,96 +35,6 @@ def add_moves_to_leela(cursor, leela):
             leela.add_move('white', move)
 
     return this_move
-
-
-# Make a function that applies a transform to the winrate that stretches out the middle range and squashes the extreme ranges,
-# to make it a more linear function and suppress Leela's suggestions in won/lost games.
-# Currently, the CDF of the probability distribution from 0 to 1 given by x^k * (1-x)^k,
-# where k is set to be the value such that the stdev of the distribution is stdev.
-def winrate_transformer(stdev, verbosity):
-    # Variance of the distribution =
-    # = The integral from 0 to 1 of (x-0.5)^2 x^k (1-x)^k dx
-    # = (via integration by parts)  (k+2)!k! / (2k+3)! - (k+1)!k! / (2k+2)! + (1/4) * k!^2 / (2k+1)!
-    #
-    # Normalize probability by dividing by the integral from 0 to 1 of x^k (1-x)^k dx :
-    # k!^2 / (2k+1)!
-    # And we get:
-    # (k+1)(k+2) / (2k+2) / (2k+3) - (k+1) / (2k+2) + (1/4)
-    # OR 0.25 - (k ** 2 + 2 * k + 1) / (2 * k ** 2 + 5 * k + 3) / 2
-    def variance(k):
-        """
-        Variance of the distribution
-        :param k: 0 <= k <= 1
-        :return: float
-        """
-        k = float(k)
-        return 0.25 - (k ** 2 + 2 * k + 1) / (2 * k ** 2 + 5 * k + 3) / 2
-
-    def find_k(lower, upper):
-        """
-        Perform binary search to find the appropriate k
-        :param lower: float
-        :param upper: float
-        :return: float
-        """
-        while True:
-            mid = 0.5 * (lower + upper)
-            if mid == lower or mid == upper or lower >= upper:
-                return mid
-            var = variance(mid)
-            if var < stdev * stdev:
-                upper = mid
-            else:
-                lower = mid
-
-    if stdev * stdev <= 1e-10:
-        raise ValueError("Stdev too small, please choose a more reasonable value")
-
-    # Repeated doubling to find an upper bound big enough
-    upper = 1
-    while variance(upper) > stdev * stdev:
-        upper = upper * 2
-
-    k = find_k(0, upper)
-
-    if verbosity > 2:
-        print("Using k=%f, stdev=%f" % (k, math.sqrt(variance(k))), file=sys.stderr)
-
-    def unnormpdf(x):
-        """
-        Unnormalize probability density function
-        :param x:
-        :return:
-        """
-        if x <= 0 or x >= 1:
-            return 0
-        a = math.log(x)
-        b = math.log(1 - x)
-        logprob = a * k + b * k
-        # Constant scaling so we don't overflow floats with crazy values
-        logprob = logprob - 2 * k * math.log(0.5)
-        return math.exp(logprob)
-
-    # Precompute a big array to approximate the CDF
-    n = 100000
-    lookup = [unnormpdf(float(x) / float(n)) for x in range(n + 1)]
-    cum = 0
-
-    for i in range(n + 1):
-        cum += lookup[i]
-        lookup[i] = cum
-
-    for i in range(n + 1):
-        lookup[i] = lookup[i] / lookup[n]
-
-    def cdf(x):
-        i = int(math.floor(x * n))
-        if i >= n or i < 0:
-            return x
-        excess = x * n - i
-        return lookup[i] + excess * (lookup[i + 1] - lookup[i])
-
-    return lambda x: cdf(x)
 
 
 def retry_analysis(fn):
@@ -331,11 +243,20 @@ default_var_thresh = 0.010
 
 if __name__ == '__main__':
 
+    time_start = datetime.datetime.now()
+
     args = config.parser.parse_args()
+
+    if args.verbosity > 0:
+        print("Leela analysis started at %s" % time_start, file=sys.stderr)
+        print("Game moves analysis: %d seconds per move" % args.analyze_time, file=sys.stderr)
+        print("Variations analysis: %d seconds per move" % args.variations_time, file=sys.stderr)
+
     sgf_fn = args.SGF_FILE
 
     # if no file name to save analyze results provided - it will use original source file with concat 'analyzed'
     if not args.save_to_file:
+        # FIXME: possible bug with folders which contain "." in their names
         args.save_to_file = args.SGF_FILE.split('.')[0] + '_analyzed.sgf'
 
     if not os.path.exists(sgf_fn):
@@ -356,14 +277,14 @@ if __name__ == '__main__':
     if args.verbosity > 1:
         print("Checkpoint dir: %s" % base_dir, file=sys.stderr)
 
-    comment_requests_analyze = {}
-    comment_requests_variations = {}
+    comment_requests_analyze = {}  # will contain move numbers that should be analyzed
+    comment_requests_variations = {}  # will contain move numbers that should be analyzed with variations
+
+    # Set up SGF cursor
     cursor = sgf.cursor()
 
-    if 'SZ' in cursor.node.keys():
-        board_size = int(cursor.node['SZ'].data[0])
-    else:
-        board_size = 19
+    # Set board size
+    board_size = int(cursor.node.get('SZ').data[0]) if cursor.node.get('SZ') else 19
 
     if board_size != 19:
         print("Warning: board size is not 19 so Leela could be much weaker and less accurate", file=sys.stderr)
@@ -372,33 +293,30 @@ if __name__ == '__main__':
             print("Warning: Consider also setting --analyze-thresh and --var-thresh higher", file=sys.stderr)
 
     move_num = -1
-    cursor = sgf.cursor()
 
+    # First loop for comments
     while not cursor.atEnd:
+
+        # Go to next node and increment move_num
         cursor.next()
         move_num += 1
 
-        if 'C' in cursor.node.keys():
-            if 'analyze' in cursor.node['C'].data[0]:
+        node_comment = cursor.node.get('C')
+
+        # Store moves, requested for analysis and variations
+        if node_comment:
+            match = re.match(regex.comment_regex, node_comment.data[0])
+
+            if 'analyze' in match.group('node_comment'):
                 comment_requests_analyze[move_num] = True
 
-            if 'variations' in cursor.node['C'].data[0]:
+            if 'variations' in match.group('node_comment'):
+                comment_requests_analyze[move_num] = True
                 comment_requests_variations[move_num] = True
 
-    # Wipe comments is needed
-    if args.wipe_comments:
-        cursor = sgf.cursor()
-        cnode = cursor.node
-
-        if cnode.has_key('C'):
-            cnode['C'].data[0] = ""
-
-        while not cursor.atEnd:
-            cursor.next()
-            cnode = cursor.node
-
-            if cnode.has_key('C'):
-                cnode['C'].data[0] = ""
+            # Wipe comments is needed
+            if args.wipe_comments:
+                node_comment.data[0] = ""
 
     cursor = sgf.cursor()
     is_handicap_game = False
@@ -458,11 +376,14 @@ if __name__ == '__main__':
         )
 
 
-    transform_winrate = winrate_transformer(config.defaults['stdev'], args.verbosity)
+    transform_winrate = utils.winrate_transformer(config.defaults['stdev'], args.verbosity)
+
     analyze_threshold = transform_winrate(0.5 + 0.5 * args.analyze_threshold) - \
                         transform_winrate(0.5 - 0.5 * args.analyze_threshold)
+
     variations_threshold = transform_winrate(0.5 + 0.5 * args.variations_threshold) - \
                            transform_winrate(0.5 - 0.5 * args.variations_threshold)
+
     print("Executing approx %.0f analysis steps" % approx_tasks_max(), file=sys.stderr)
 
     progress_bar = progressbar.ProgressBar(max_value=approx_tasks_max())
@@ -639,6 +560,12 @@ if __name__ == '__main__':
 
     # Save final results into file
     utils.write_to_file(args.save_to_file, 'w', sgf)
+
+    time_stop = datetime.datetime.now()
+
+    if args.verbosity > 0:
+        print("Leela analysis stopped at %s" % time_stop, file=sys.stderr)
+        print("Elapsed time: %s" % (time_stop-time_start), file=sys.stderr)
 
     # delay in case of sequential running of several analysis
     time.sleep(1)
