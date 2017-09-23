@@ -19,30 +19,31 @@ def calculate_tasks_left(sgf_file, request_analyze, request_variations):
     Calculate tasks left
     """
     sgf_cursor = sgf_file.cursor()
-    move_number = 0
+    move_num = 0
     analyze_tasks = 0
-    vars_tasks = 0
+    variations_tasks = 0
 
-    while not cursor.atEnd:
+    # Look through every node
+    while not sgf_cursor.atEnd:
         sgf_cursor.next()
+        analysis_mode = None
 
-        # If variation task requested in comments
-        if move_number in request_variations:
+        # Conditions
+        is_default_analysis = args.analyze_start <= move_num <= args.analyze_end
+        is_analyze_request = move_num in request_analyze
+        is_prev_analyze_request = (move_num - 1) in request_analyze
+        is_vars_request = move_num in request_variations
+        is_prev_vars_request = (move_num - 1) in request_variations
+
+        if is_vars_request:
             analyze_tasks += 1
-            vars_tasks += 1
-
-        # If analyze task requested in comments
-        elif move_number in request_analyze or \
-                        (move_number - 1) in request_analyze or \
-                        (move_number - 1) in request_variations:
+            variations_tasks += 1
+        elif any([is_default_analysis, is_analyze_request, is_prev_analyze_request, is_prev_vars_request]):
             analyze_tasks += 1
 
-        # Default analysis
-        elif args.analyze_start <= move_number <= args.analyze_end:
-            analyze_tasks += 1
+        move_num += 1
 
-        move_number += 1
-    return analyze_tasks, vars_tasks
+    return analyze_tasks, variations_tasks
 
 
 def add_moves_to_leela(cursor, leela):
@@ -98,6 +99,28 @@ def do_analyze(leela, base_dir, seconds_per_search):
             ckpt_file.close()
 
     return stats, move_list
+
+
+def next_move_pos(cursor):
+    """
+    Go to next node and look what move was played
+    :return: SGF-like move string
+    """
+    next_move = None
+
+    if not cursor.atEnd:
+        cursor.next()
+        node_white_move = cursor.node.get('W')
+        node_black_move = cursor.node.get('B')
+
+        if node_white_move:
+            next_move = node_white_move.data[0]
+        elif node_black_move:
+            next_move = node_black_move.data[0]
+
+        cursor.previous()
+
+    return next_move
 
 
 if __name__ == '__main__':
@@ -185,9 +208,9 @@ if __name__ == '__main__':
         print("Warning: Komi not specified, assuming %.1f" % komi, file=sys.stderr)
     print(komi)
 
-    # First loop for comments parsing
-    comment_requests_analyze = {}  # will contain move numbers that should be analyzed
-    comment_requests_variations = {}  # will contain move numbers that should be analyzed with variations
+    # COLLECT MOVES REQUESTED FOR ANALYSIS AND VARIATIONS
+    comment_requests_analyze = {}  # will contain moves requested for analysis
+    comment_requests_variations = {}  # will contain moves requested for varioations
     move_num = -1
 
     while not cursor.atEnd:
@@ -213,9 +236,12 @@ if __name__ == '__main__':
             if args.wipe_comments:
                 node_comment.data[0] = ""
 
-    # Calculating initial analyze and variations tasks
+    # END OF SGF-FILE REACHED
+
+    # Count initial analyze and variations tasks
     (analyze_tasks_initial, variations_tasks_initial) = calculate_tasks_left(sgf, comment_requests_analyze,
                                                                              comment_requests_variations)
+    print(analyze_tasks_initial, variations_tasks_initial)
     variations_task_probability = 1.0 / (1.0 + args.variations_threshold * 100.0)
     analyze_tasks_initial_done = 0
     variations_tasks = variations_tasks_initial
@@ -226,20 +252,21 @@ if __name__ == '__main__':
         """
         Calculate approximate tasks done
         """
-        return int(analyze_tasks_initial_done + (variations_tasks_done * args.nodes_per_variation))
-
+        return (
+            analyze_tasks_initial_done +
+            (variations_tasks_done * args.nodes_per_variation)
+        )
 
     def approx_tasks_max():
         """
         Calculate approximate tasks max
         """
-        return int(
+        return (
             (analyze_tasks_initial - analyze_tasks_initial_done) *
             (1 + variations_task_probability * args.nodes_per_variation) +
             analyze_tasks_initial_done +
             (variations_tasks * args.nodes_per_variation)
         )
-
 
     transform_winrate = utils.winrate_transformer(config.defaults['stdev'], args.verbosity)
 
@@ -279,30 +306,32 @@ if __name__ == '__main__':
         move_num = -1
         prev_stats = {}
         prev_move_list = []
-        has_prev = False
+        has_previous = False
 
         # Start Leela process
         leela.start()
         add_moves_to_leela(cursor, leela)
 
-        # Analyze main line, collect winrates
+        # ANALYZE MAIN LINE AND COLLECT WINRATES
         while not cursor.atEnd:
             cursor.next()
             move_num += 1
 
-            # Add played move to history
+            # Add move to history and get whose turn is now
             this_move = add_moves_to_leela(cursor, leela)
-
-            # Get current player color
             current_player = leela.whose_turn()
             prev_player = "white" if current_player == "black" else "black"
 
-            # Booleans
+            # Conditions to start analysis
             is_default_analysis = args.analyze_start <= move_num <= args.analyze_end
-            is_analyze_request = any(move in comment_requests_analyze for move in [move_num, move_num - 1])
-            is_vars_request = any(move in comment_requests_variations for move in [move_num, move_num - 1])
+            is_analyze_request = move_num in comment_requests_analyze
+            is_prev_analyze_request = (move_num - 1) in comment_requests_analyze
+            is_vars_request = move_num in comment_requests_variations
+            is_prev_vars_request = (move_num - 1) in comment_requests_variations
 
-            if is_default_analysis or is_analyze_request or is_vars_request:
+            # START MAIN LINE ANALYSIS
+            if any([is_default_analysis, is_analyze_request, is_prev_analyze_request,
+                    is_vars_request, is_prev_vars_request]):
                 stats, move_list = do_analyze(leela, base_dir, args.analyze_time)
 
                 # Store winrate of black player after played move
@@ -328,12 +357,67 @@ if __name__ == '__main__':
                         transdelta = min(0.0, (-transdelta if leela.whose_turn() == "black" else transdelta))
 
                     if transdelta <= -analyze_threshold:
-                        print(transdelta)
                         (delta_comment, delta_lb_values) = annotations.format_delta_info(delta, transdelta, stats,
                                                                                          this_move, board_size)
-                        annotations.annotate_sgf(cursor, delta_comment, delta_lb_values, [])
+                        annotations.annotate_sgf(cursor, delta_comment, delta_lb_values)
 
-            utils.write_to_file(args.save_to_file, 'w', sgf)
+                is_reached_analyze_thresh = transdelta <= -analyze_threshold
+                is_reached_vars_thresh = transdelta <= -variations_threshold
+                is_skipped_for_vars = (args.skip_white and prev_player == "white") or \
+                                      (args.skip_black and prev_player == "black")
+
+                # If previous move was analyzed and current move is not skipped,
+                # store moves that should be analyzed with variations
+                if has_previous and not is_skipped_for_vars and (is_reached_vars_thresh or is_prev_vars_request):
+                    needs_variations[move_num - 1] = (prev_stats, prev_move_list)
+
+                    # Increment counter if previous move is not comment requested
+                    if not is_prev_vars_request:
+                        variations_tasks += 1
+
+                # Look where the next move was played
+                next_game_move = next_move_pos(cursor)
+
+                # Add winrate comment
+                winrate_comment = annotations.format_winrate(stats, move_list, board_size, next_game_move)
+                annotations.annotate_sgf(cursor, winrate_comment)
+
+                # Add comment with analysis to previous move
+                if has_previous and (is_prev_analyze_request or is_prev_vars_request or is_reached_analyze_thresh) and \
+                        not is_skipped_for_vars:
+                    (analysis_comment, lb_values, tr_values) = annotations.format_analysis(
+                        prev_stats, prev_move_list, this_move)
+                    cursor.previous()
+                    annotations.annotate_sgf(cursor, analysis_comment, lb_values, tr_values)
+                    cursor.next()
+
+                # Save move information for next move analysis
+                prev_stats = stats
+                prev_move_list = move_list
+                has_prev = True
+                analyze_tasks_initial_done += 1  # count completed task
+
+                # Update sgf-file and refresh progressbar
+                utils.write_to_file(args.save_to_file, 'w', sgf)
+                refresh_progress_bar()
+
+            # SKIP MAIN LINE ANALYSIS
+            else:
+                prev_stats = {}
+                prev_move_list = []
+                has_prev = False
+
+            # END MAIN LINE ANALYSIS
+
+        # Stop leela process and clear history
+        leela.stop()
+        leela.clear_history()
+
+        # Save winrate graph to file
+        if args.win_graph:
+            utils.graph_winrates(collected_winrates, args.SGF_FILE)
+
+        utils.write_to_file(args.save_to_file, 'w', sgf)
 
     except:
         traceback.print_exc()
