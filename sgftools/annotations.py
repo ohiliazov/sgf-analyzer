@@ -98,6 +98,10 @@ def format_delta_info(delta, trans_delta, stats, this_move, board_size):
     return comment, LB_values
 
 
+def flip_winrate(wr, color):
+    return (1.0 - wr) if color == "white" else wr
+
+
 def format_analysis(stats, move_list, this_move):
     abet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     comment = ""
@@ -110,7 +114,8 @@ def format_analysis(stats, move_list, this_move):
         comment += "\n"
 
         for move_label, move in list(zip(abet, move_list)):
-            comment += "%s -> Win%%: %.2f%% (%d visits) \n" % (move_label, move['winrate'] * 100, move['visits'])
+            comment += "%s -> Win%%: %.2f%% (%d visits) \n" \
+                       % (move_label, flip_winrate(move['winrate'], move['color']) * 100, move['visits'])
 
     # Check for pos being "" or "tt", values which indicate passes, and don't attempt to display markers for them
     LB_values = ["%s:%s" % (mv['pos'], L) for L, mv in zip(abet, move_list) if mv['pos'] != "" and mv['pos'] != "tt"]
