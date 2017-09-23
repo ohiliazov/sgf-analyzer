@@ -103,8 +103,13 @@ def flip_winrate(wr, color):
 
 
 def format_analysis(stats, move_list, this_move):
+    """
+    Make comment with analysis information, such as number of visits and alternate moves winrates
+    :return: string
+    """
     abet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     comment = ""
+
     if 'bookmoves' in stats:
         comment += "==========================\n"
         comment += "Considered %d/%d bookmoves\n" % (stats['bookmoves'], stats['positions'])
@@ -117,25 +122,50 @@ def format_analysis(stats, move_list, this_move):
             comment += "%s -> Win%%: %.2f%% (%d visits) \n" \
                        % (move_label, flip_winrate(move['winrate'], move['color']) * 100, move['visits'])
 
-    # Check for pos being "" or "tt", values which indicate passes, and don't attempt to display markers for them
-    LB_values = ["%s:%s" % (mv['pos'], L) for L, mv in zip(abet, move_list) if mv['pos'] != "" and mv['pos'] != "tt"]
-    mvs = [mv['pos'] for mv in move_list]
-    TR_values = [this_move] if this_move not in mvs and this_move is not None and not pos_is_pass(this_move) else []
-    return comment, LB_values, TR_values
+    # Mark labels and skip passes
+    label_values = []
+    for move_label, move in zip(abet, move_list):
+        if move['pos'] not in ["", "tt"]:
+            label_values.append("%s:%s" % (move['pos'], move_label))
 
+    suggested_moves = [move['pos'] for move in move_list]
 
-def annotate_sgf(cursor, comment, LB_values, TR_values):
-    c_node = cursor.node
-    if c_node.has_key('C'):
-        c_node['C'].data[0] += comment
+    # Mark triangles
+    if this_move and this_move not in suggested_moves and not pos_is_pass(this_move):
+        triangle_values = [this_move]
     else:
-        c_node.add_property(Property('C', [comment]))
+        triangle_values = None
 
-    if len(LB_values) > 0:
-        c_node.add_property(Property('LB', LB_values))
+    return comment, label_values, triangle_values
 
-    if len(TR_values) > 0:
-        c_node.add_property(Property('TR', TR_values))
+
+def annotate_sgf(cursor, comment, labels_values=None, triangle_values=None):
+    """
+    Add comment, labels and triangles to node
+    """
+    node_comment = cursor.node.get('C')
+    node_labels = cursor.node.get('C')
+    node_triangles = cursor.node.get('C')
+
+    # Add comment to existing property or create
+    if node_comment:
+        node_comment.data[0] += comment
+    else:
+        cursor.node.add_property(Property('C', [comment]))
+
+    # Add labels
+    if labels_values:
+        if node_labels:
+            node_labels.data = labels_values
+        else:
+            cursor.node.add_property(Property('LB', labels_values))
+
+    # Add triangles
+    if triangle_values:
+        if node_triangles:
+            node_triangles.data = triangle_values
+        else:
+            cursor.node.add_property(Property('TR', triangle_values))
 
 
 def self_test_1():
