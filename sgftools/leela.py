@@ -324,7 +324,8 @@ class Leela(object):
                     'nn_winrate': nn_winrate,
                     'nn_count': nn_count,
                     'policy_prob': policy_prob,
-                    'pv': pv
+                    'pv': pv,
+                    'color': self.whose_turn()
                 }
                 move_list.append(info)
 
@@ -347,7 +348,8 @@ class Leela(object):
                     'r_winrate': r_winrate,
                     'r_count': r_count,
                     'policy_prob': policy_prob,
-                    'pv': pv
+                    'pv': pv,
+                    'color': self.whose_turn()
                 }
                 move_list.append(info)
 

@@ -30,10 +30,11 @@ defaults = {
     'analyze_end':          1000,   # Analyze game till given move
     'verbosity':            0,      # Set the verbosity level, 0: progress, 1: progress+status, 2: progress+status+state
 
-    'restarts':            1,      # Number of restarts when bots crashes
-    'stdev':               0.22,   # Default standard deviation
-    'skip_white':          False,  # Skip analysis of white
-    'skip_black':          False,  # Skip analysis of black
+    'restarts':             1,      # Number of restarts when bots crashes
+    'stdev':                0.22,   # Default standard deviation
+    'skip_white':           False,  # Skip analysis of white
+    'skip_black':           False,  # Skip analysis of black
+    'skip_checkpoints':     False,  # Skip existing checkpoints
     'ckpt_dir': os.path.expanduser('~/.leela_checkpoints'),  # Path to directory to cache partially complete analyses
 }
 
@@ -152,3 +153,9 @@ parser.add_argument('--skip-black',
                     default=defaults['skip_black'],
                     action='store_true',
                     help="Do not display analysis or explore variations for black mistakes")
+
+parser.add_argument('--skip-checkpoints',
+                    dest='skip_checkpoints',
+                    default=defaults['skip_checkpoints'],
+                    action='store_true',
+                    help="Do not use existing checkpoints. Mostly used for debug purpose.")
