@@ -76,6 +76,28 @@ def add_moves_to_leela(cursor, leela):
     return this_move
 
 
+def next_move_pos(cursor):
+    """
+    Go to next node and look what move was played
+    :return: SGF-like move string
+    """
+    next_move = None
+
+    if not cursor.atEnd:
+        cursor.next()
+        node_white_move = cursor.node.get('W')
+        node_black_move = cursor.node.get('B')
+
+        if node_white_move:
+            next_move = node_white_move.data[0]
+        elif node_black_move:
+            next_move = node_black_move.data[0]
+
+        cursor.previous()
+
+    return next_move
+
+
 def do_analyze(leela, base_dir, seconds_per_search):
     ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(seconds_per_search) + "sec"
     ckpt_fn = os.path.join(base_dir, ckpt_hash)
@@ -101,26 +123,54 @@ def do_analyze(leela, base_dir, seconds_per_search):
     return stats, move_list
 
 
-def next_move_pos(cursor):
+def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_dir, args):
     """
-    Go to next node and look what move was played
-    :return: SGF-like move string
+    Analyze variations and add them to SGF
     """
-    next_move = None
 
-    if not cursor.atEnd:
-        cursor.next()
-        node_white_move = cursor.node.get('W')
-        node_black_move = cursor.node.get('B')
+    # Do not analyze variations if Leela still in opening book
+    if 'bookmoves' in stats or len(move_list) <= 0:
+        return None
 
-        if node_white_move:
-            next_move = node_white_move.data[0]
-        elif node_black_move:
-            next_move = node_black_move.data[0]
+    nodes_per_variation = args.nodes_per_variation
+    verbosity = args.verbosity
+    rootcolor = leela.whose_turn()
 
-        cursor.previous()
+    # Initiate tree and leaves of SGF
+    leaves = []
+    tree = {
+        "children": [],
+        "is_root": True,
+        "history": [],
+        "explored": False,
+        "prob": 1.0,
+        "stats": stats,
+        "move_list": move_list,
+        "color": rootcolor
+    }
 
-    return next_move
+    def expand(node, stats, move_list):
+        """
+        Expand node with variations
+        """
+        assert node["color"] in ['white', 'black']
+
+        def child_prob_raw(i, move): # TODO: explore this function
+            # possible for book moves
+            if "is_book" in move:
+                return 1.0
+            elif node["color"] == rootcolor:
+                return move["visits"] ** 1.0
+            else:
+                return (move["policy_prob"] + move["visits"]) / 2.0
+
+        probsum = 0.0
+
+        def child_prob(i, move):
+            return child_prob_raw(i, move) / probsum
+
+        for (i, move) in enumerate(move_list):
+            probsum += child_prob_raw(i, move)
 
 
 if __name__ == '__main__':
@@ -257,6 +307,7 @@ if __name__ == '__main__':
             (variations_tasks_done * args.nodes_per_variation)
         )
 
+
     def approx_tasks_max():
         """
         Calculate approximate tasks max
@@ -267,6 +318,7 @@ if __name__ == '__main__':
             analyze_tasks_initial_done +
             (variations_tasks * args.nodes_per_variation)
         )
+
 
     transform_winrate = utils.winrate_transformer(config.defaults['stdev'], args.verbosity)
 
@@ -407,7 +459,7 @@ if __name__ == '__main__':
                 prev_move_list = []
                 has_prev = False
 
-            # END MAIN LINE ANALYSIS
+                # END MAIN LINE ANALYSIS
 
         # Stop leela process and clear history
         leela.stop()
@@ -417,7 +469,39 @@ if __name__ == '__main__':
         if args.win_graph:
             utils.graph_winrates(collected_winrates, args.SGF_FILE)
 
+        # Update sgf-file
         utils.write_to_file(args.save_to_file, 'w', sgf)
+
+        # Get cursor to first node
+        move_num = -1
+        cursor = sgf.cursor()
+
+        # Start Leela to analyze variations
+        leela.start()
+        add_moves_to_leela(cursor, leela)
+
+        # START VARIATIONS ANALYSIS
+        while not cursor.atEnd:
+            cursor.next()
+            move_num += 1
+
+            # Add move to history
+            add_moves_to_leela(cursor, leela)
+
+            # Skip if move doesn't need variations analysis
+            if move_num not in needs_variations:
+                continue
+
+            # Get stats and move list of current move and next move position
+            stats, move_list = needs_variations[move_num]
+            next_game_move = next_move_pos(cursor)
+
+            # Add variations to SGF and count completed task
+            do_variations(cursor, leela, stats, move_list, board_size, next_game_move, base_dir, args)
+            variations_tasks_done += 1
+
+            # Update sgf-file
+            utils.write_to_file(args.save_to_file, 'w', sgf)
 
     except:
         traceback.print_exc()

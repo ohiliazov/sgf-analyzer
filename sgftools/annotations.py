@@ -57,6 +57,7 @@ def format_winrate(stats, move_list, board_size, next_game_move):
     else:
         comment += "Overall black win%: not computed (Leela still in opening book)\n"
 
+    # Comment if leela preffered another next move
     if len(move_list) > 0 and move_list[0]['pos'] != next_game_move:
         comment += "Leela's preferred next move: %s\n" % format_pos(move_list[0]['pos'], board_size)
     else:
