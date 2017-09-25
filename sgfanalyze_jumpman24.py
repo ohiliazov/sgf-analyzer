@@ -155,7 +155,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         """
         assert node["color"] in ['white', 'black']
 
-        def child_prob_raw(i, move): # TODO: explore this function
+        def child_prob_raw(i, move):  # TODO: explore this function
             # possible for book moves
             if "is_book" in move:
                 return 1.0
@@ -171,6 +171,58 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
         for (i, move) in enumerate(move_list):
             probsum += child_prob_raw(i, move)
+
+        for (i, move) in enumerate(move_list):
+            # Don't expand on the actual game line as a variation!
+            if node["is_root"] and move["pos"] == game_move:
+                node["children"].append(None)
+                continue
+
+            subhistory = node["history"][:]
+            subhistory.append(move["pos"])
+            prob = node["prob"] * child_prob(i, move)
+            clr = "white" if node["color"] == "black" else "black"
+            child = {
+                "children": [],
+                "is_root": False,
+                "history": subhistory,
+                "explored": False,
+                "prob": prob,
+                "stats": {},
+                "move_list": [],
+                "color": clr
+            }
+            node["children"].append(child)
+            leaves.append(child)
+
+        node["stats"] = stats
+        node["move_list"] = move_list
+        node["explored"] = True
+
+        for i in range(len(leaves)):
+            if leaves[i] is node:
+                del leaves[i]
+                break
+
+    expand(tree, stats, move_list)
+
+    def search(node):
+        """
+        Analyze variation
+        """
+        for mv in node["history"]:
+            leela.add_move(leela.whose_turn(), mv)
+        stats, move_list = do_analyze(leela, base_dir, args.variations_time)
+
+        expand(node, stats, move_list)
+
+        for mv in node["history"]:
+            leela.pop_move()
+
+    for i in range(nodes_per_variation):
+        if len(leaves) > 0:
+            node = max(leaves, key=(lambda n: n["prob"]))
+            search(node)
 
 
 if __name__ == '__main__':

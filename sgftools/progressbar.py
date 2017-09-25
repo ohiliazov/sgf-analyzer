@@ -94,6 +94,7 @@ class ProgressBar(object):
                 bar_str, time_remaining))
         time.sleep(0.5)
 
+
 def self_test_1():
     pb = ProgressBar(0, 100, 50, 1)
     pb.start()
