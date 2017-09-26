@@ -1,5 +1,4 @@
 import hashlib
-import math
 import os
 import pickle
 import sys
@@ -60,7 +59,7 @@ def add_moves_to_leela(cursor, leela):
         this_move = node_black_move.data[0]
         leela.add_move('black', this_move)
 
-    if node_white_move:
+    elif node_white_move:
         this_move = node_white_move.data[0]
         leela.add_move('white', this_move)
 
@@ -98,6 +97,22 @@ def next_move_pos(cursor):
     return next_move
 
 
+def retry_analysis(fn):
+    global RESTART_COUNT
+
+    def wrapped(*args, **kwargs):
+        for i in range(RESTART_COUNT + 1):
+            try:
+                return fn(*args, **kwargs)
+            except Exception as e:
+                if i + 1 == RESTART_COUNT + 1:
+                    raise e
+                print("Error in leela, retrying analysis...", file=sys.stderr)
+
+    return wrapped
+
+
+@retry_analysis
 def do_analyze(leela, base_dir, seconds_per_search):
     ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(seconds_per_search) + "sec"
     ckpt_fn = os.path.join(base_dir, ckpt_hash)
@@ -204,8 +219,6 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
                 del leaves[i]
                 break
 
-    expand(tree, stats, move_list)
-
     def search(node):
         """
         Analyze variation
@@ -219,10 +232,77 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         for mv in node["history"]:
             leela.pop_move()
 
+    expand(tree, stats, move_list)
+
     for i in range(nodes_per_variation):
         if len(leaves) > 0:
             node = max(leaves, key=(lambda n: n["prob"]))
             search(node)
+
+    def advance(cursor, color, mv):
+        found_child_idx = None
+        clr = 'W' if color == 'white' else 'B'
+
+        for j in range(len(cursor.children)):
+            if clr in cursor.children[j].keys() and cursor.children[j][clr].data[0] == mv:
+                found_child_idx = j
+
+        if found_child_idx is not None:
+            cursor.next(found_child_idx)
+        else:
+            nnode = sgflib.Node()
+            nnode.add_property(sgflib.Property(clr, [mv]))
+            cursor.append_node(nnode)
+            cursor.next(len(cursor.children) - 1)
+
+    def record(node):
+        """
+        Write node to SGF
+        """
+        if not node["is_root"]:
+            annotations.annotate_sgf(cursor,
+                                     annotations.format_winrate(node["stats"], node["move_list"], board_size, None),
+                                     None, None)
+            move_list_to_display = []
+
+            # Only display info for the principal variation or for lines that have been explored.
+            for i in range(len(node["children"])):
+                child = node["children"][i]
+
+                if child is not None and (i == 0 or child["explored"]):
+                    move_list_to_display.append(node["move_list"][i])
+
+            (analysis_comment, lb_values, tr_values) = annotations.format_analysis(node["stats"], move_list_to_display,
+                                                                                   None)
+            annotations.annotate_sgf(cursor, analysis_comment, lb_values, tr_values)
+
+        for i in range(len(node["children"])):
+            child = node["children"][i]
+
+            if child is not None:
+                if child["explored"]:
+                    advance(cursor, node["color"], child["history"][-1])
+                    record(child)
+                    cursor.previous()
+
+                # Only show variations for the principal line, to prevent info overload
+                elif i == 0:
+                    pv = node["move_list"][i]["pv"]
+                    color = node["color"]
+
+                    if args.num_to_show is not None:
+                        num_to_show = args.num_to_show
+                    else:
+                        num_to_show = min(len(pv), max([1, len(pv) * 2 / 3 - 1]))
+
+                    for k in range(int(num_to_show)):
+                        advance(cursor, color, pv[k])
+                        color = 'black' if color == 'white' else 'white'
+
+                    for k in range(int(num_to_show)):
+                        cursor.previous()
+
+    record(tree)
 
 
 if __name__ == '__main__':
@@ -308,7 +388,6 @@ if __name__ == '__main__':
         else:
             komi = 6.5 if is_japanese_rules else 7.5
         print("Warning: Komi not specified, assuming %.1f" % komi, file=sys.stderr)
-    print(komi)
 
     # COLLECT MOVES REQUESTED FOR ANALYSIS AND VARIATIONS
     comment_requests_analyze = {}  # will contain moves requested for analysis
@@ -343,7 +422,6 @@ if __name__ == '__main__':
     # Count initial analyze and variations tasks
     (analyze_tasks_initial, variations_tasks_initial) = calculate_tasks_left(sgf, comment_requests_analyze,
                                                                              comment_requests_variations)
-    print(analyze_tasks_initial, variations_tasks_initial)
     variations_task_probability = 1.0 / (1.0 + args.variations_threshold * 100.0)
     analyze_tasks_initial_done = 0
     variations_tasks = variations_tasks_initial
@@ -456,8 +534,8 @@ if __name__ == '__main__':
                     if this_move != collected_best_moves[move_num - 1]:
                         delta = stats['winrate'] - collected_best_move_winrates[move_num - 1]
                         delta = min(0.0, (-delta if leela.whose_turn() == "black" else delta))  # adjust delta <= 0
-                        transdelta = transform_winrate(stats['winrate']) - \
-                                     transform_winrate(collected_best_move_winrates[move_num - 1])
+                        transdelta = transform_winrate(stats['winrate']) - transform_winrate(
+                            collected_best_move_winrates[move_num - 1])
                         transdelta = min(0.0, (-transdelta if leela.whose_turn() == "black" else transdelta))
 
                     if transdelta <= -analyze_threshold:
@@ -560,13 +638,13 @@ if __name__ == '__main__':
         print("Failure, reporting partial results...", file=sys.stderr)
     finally:
         leela.stop()
-    """
-    END
-    """
 
+    progress_bar.finish()
     utils.write_to_file(args.save_to_file, 'w', sgf)
     time_stop = datetime.datetime.now()
 
     if args.verbosity > 0:
         print("Leela analysis stopped at %s" % time_stop, file=sys.stderr)
         print("Elapsed time: %s" % (time_stop - time_start), file=sys.stderr)
+
+    time.sleep(1)
