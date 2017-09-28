@@ -53,7 +53,6 @@ def add_moves_to_leela(cursor, leela):
     node_white_move = cursor.node.get('W')
     node_black_stones = cursor.node.get('AB')
     node_white_stones = cursor.node.get('AW')
-
     # Store commands to add black or white moves
     if node_black_move:
         this_move = node_black_move.data[0]
@@ -138,7 +137,7 @@ def do_analyze(leela, base_dir, seconds_per_search):
     return stats, move_list
 
 
-def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_dir, args):
+def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_dir):
     """
     Analyze variations and add them to SGF
     """
@@ -147,8 +146,6 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
     if 'bookmoves' in stats or len(move_list) <= 0:
         return None
 
-    nodes_per_variation = args.nodes_per_variation
-    verbosity = args.verbosity
     rootcolor = leela.whose_turn()
 
     # Initiate tree and leaves of SGF
@@ -179,10 +176,10 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
             else:
                 return (move["policy_prob"] + move["visits"]) / 2.0
 
-        probsum = 0.0
-
         def child_prob(i, move):
             return child_prob_raw(i, move) / probsum
+
+        probsum = 0.0
 
         for (i, move) in enumerate(move_list):
             probsum += child_prob_raw(i, move)
@@ -225,8 +222,8 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         """
         for mv in node["history"]:
             leela.add_move(leela.whose_turn(), mv)
-        stats, move_list = do_analyze(leela, base_dir, args.variations_time)
 
+        stats, move_list = do_analyze(leela, base_dir, args.variations_time)
         expand(node, stats, move_list)
 
         for mv in node["history"]:
@@ -234,7 +231,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
     expand(tree, stats, move_list)
 
-    for i in range(nodes_per_variation):
+    for i in range(args.nodes_per_variation):
         if len(leaves) > 0:
             node = max(leaves, key=(lambda n: n["prob"]))
             search(node)
@@ -290,10 +287,10 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
                     pv = node["move_list"][i]["pv"]
                     color = node["color"]
 
+                    num_to_show = min(len(pv), max(1, len(pv) * 2 / 3 - 1))
+
                     if args.num_to_show is not None:
                         num_to_show = args.num_to_show
-                    else:
-                        num_to_show = min(len(pv), max([1, len(pv) * 2 / 3 - 1]))
 
                     for k in range(int(num_to_show)):
                         advance(cursor, color, pv[k])
@@ -576,7 +573,7 @@ if __name__ == '__main__':
                 # Save move information for next move analysis
                 prev_stats = stats
                 prev_move_list = move_list
-                has_prev = True
+                has_previous = True
                 analyze_tasks_initial_done += 1  # count completed task
 
                 # Update sgf-file and refresh progressbar
@@ -587,7 +584,7 @@ if __name__ == '__main__':
             else:
                 prev_stats = {}
                 prev_move_list = []
-                has_prev = False
+                has_previous = False
 
                 # END MAIN LINE ANALYSIS
 
@@ -595,12 +592,12 @@ if __name__ == '__main__':
         leela.stop()
         leela.clear_history()
 
+        # Update sgf-file
+        utils.write_to_file(args.save_to_file, 'w', sgf)
+
         # Save winrate graph to file
         if args.win_graph:
             utils.graph_winrates(collected_winrates, args.SGF_FILE)
-
-        # Update sgf-file
-        utils.write_to_file(args.save_to_file, 'w', sgf)
 
         # Get cursor to first node
         move_num = -1
@@ -627,7 +624,7 @@ if __name__ == '__main__':
             next_game_move = next_move_pos(cursor)
 
             # Add variations to SGF and count completed task
-            do_variations(cursor, leela, stats, move_list, board_size, next_game_move, base_dir, args)
+            do_variations(cursor, leela, stats, move_list, board_size, next_game_move, base_dir)
             variations_tasks_done += 1
 
             # Update sgf-file
