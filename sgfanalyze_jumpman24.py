@@ -623,11 +623,10 @@ if __name__ == '__main__':
             stats, move_list = needs_variations[move_num]
             next_game_move = next_move_pos(cursor)
 
-            # Add variations to SGF and count completed task
+            # Analyze variations
             do_variations(cursor, leela, stats, move_list, board_size, next_game_move, base_dir)
             variations_tasks_done += 1
 
-            # Update sgf-file
             utils.write_to_file(args.save_to_file, 'w', sgf)
 
     except:

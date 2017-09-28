@@ -1,4 +1,5 @@
 from sgftools.sgflib import Property, Node
+from sgftools.utils import convert_position
 
 
 def insert_sequence(cursor, seq, data=None, callback=None):
@@ -41,15 +42,6 @@ def pos_is_pass(pos):
     return False
 
 
-def format_pos(pos, board_size):
-    # In an sgf file, passes are the empty string or tt
-    if pos_is_pass(pos):
-        return "pass"
-    if len(pos) != 2:
-        return pos
-    return "ABCDEFGHJKLMNOPQRSTUVXYZ"[ord(pos[0]) - ord('a')] + str(board_size - (ord(pos[1]) - ord('a')))
-
-
 def format_winrate(stats, move_list, board_size, next_game_move):
     comment = ""
     if 'winrate' in stats:
@@ -59,7 +51,7 @@ def format_winrate(stats, move_list, board_size, next_game_move):
 
     # Comment if leela preffered another next move
     if len(move_list) > 0 and move_list[0]['pos'] != next_game_move:
-        comment += "Leela's preferred next move: %s\n" % format_pos(move_list[0]['pos'], board_size)
+        comment += "Leela's preferred next move: %s\n" % convert_position(board_size, move_list[0]['pos'])
     else:
         comment += "\n"
 
@@ -71,28 +63,28 @@ def format_delta_info(delta, trans_delta, stats, this_move, board_size):
     LB_values = []
     if trans_delta <= -0.2:
         comment += "=================================\n"
-        comment += "Leela thinks %s is a big mistake!\n" % format_pos(this_move, board_size)
+        comment += "Leela thinks %s is a big mistake!\n" % convert_position(board_size, this_move)
         comment += "Winning percentage drops by %.2f%%!\n" % (-delta * 100)
         comment += "=================================\n"
         if not pos_is_pass(this_move):
             LB_values.append("%s:%s" % (this_move, "?"))
     elif trans_delta <= -0.1:
         comment += "=================================\n"
-        comment += "Leela thinks %s is a mistake!\n" % format_pos(this_move, board_size)
+        comment += "Leela thinks %s is a mistake!\n" % convert_position(board_size, this_move)
         comment += "Winning percentage drops by %.2f%%\n" % (-delta * 100)
         comment += "=================================\n"
         if not pos_is_pass(this_move):
             LB_values.append("%s:%s" % (this_move, "?"))
     elif trans_delta <= -0.05:
         comment += "=================================\n"
-        comment += "Leela thinks %s is not the best choice.\n" % format_pos(this_move, board_size)
+        comment += "Leela thinks %s is not the best choice.\n" % convert_position(board_size, this_move)
         comment += "Winning percentage drops by %.2f%%\n" % (-delta * 100)
         comment += "=================================\n"
         if not pos_is_pass(this_move):
             LB_values.append("%s:%s" % (this_move, "?"))
     elif trans_delta <= -0.025:
         comment += "=================================\n"
-        comment += "Leela slightly dislikes %s.\n" % format_pos(this_move, board_size)
+        comment += "Leela slightly dislikes %s.\n" % convert_position(board_size, this_move)
         comment += "=================================\n"
 
     comment += "\n"
@@ -171,7 +163,6 @@ def annotate_sgf(cursor, comment, labels_values=None, triangle_values=None):
 
 def self_test_1():
     print(pos_is_pass(""), pos_is_pass("tt"), pos_is_pass('ab'))
-    print(format_pos("aa", 19), format_pos("jj", 19), format_pos("ss", 19))
 
 
 if __name__ == '__main__':

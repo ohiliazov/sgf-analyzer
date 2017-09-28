@@ -17,11 +17,28 @@ def write_to_file(filename, mode, content):
         f.write(str(content))
 
 
+def is_pass(board_size, pos):
+    """
+    Returns True if move is a pass:
+    - B[], W[] - no board size restriction
+    - B[tt], W[tt] - board size <= 19
+    """
+    if pos == '' or (pos == 'tt' and board_size <= 19):
+        return True
+    else:
+        return False
+
+
 def convert_position(board_size, pos):
     """
     Convert SGF coordinates to board position coordinates
-    Example aa -> A1, qq -> P15
+    Examples: aa -> A1, qq -> P15
     """
+    if is_pass(board_size, pos):
+        return 'pass'
+    if len(pos) != 2:
+        return pos
+
     x = BOARD_COORD[SGF_COORD.index(pos[0])].upper()
     y = board_size - SGF_COORD.index(pos[1])
 
