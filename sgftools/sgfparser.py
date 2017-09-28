@@ -41,7 +41,20 @@ reEscape = re.compile(r'\\')
 reLineBreak = re.compile(r'\r\n?|\n\r?')  # CR, LF, CR/LF, LF/CR
 
 
-def parse_property(data):
+class Property:
+    def __init__(self, label: str, values: list):
+        self.label = label
+        self.values = values
+
+    def __str__(self):
+        return self.label + '[' + "][".join([str(x) for x in self.values]) + ']'
+
+    def add_value(self, v_list: list):
+        for value in v_list:
+            self.values.append(value)
+
+
+def parse_property(data: str):
     reProperty = r"(?P<label>[A-Z]{1,2})(?P<values>\[[\w\W]+\])+"
 
     match = re.match(reProperty, data)
@@ -92,29 +105,38 @@ def parse_property(data):
     return Property(label, values)
 
 
-class Property:
-    def __init__(self, label, values):
-        self.label = label
-        self.values = values
-
-    def __str__(self):
-        return self.label + '[' + "][".join([str(x) for x in self.values]) + ']'
-
-
-def parse_node(data):
-    pass
-
-
 node_dict = {
-    'A': (";GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]RU[Japanese]SZ[19]HA[3]KM[0.50]TM[10]OT[1/7 Canadian]\n"
+    'A': ("GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]RU[Japanese]SZ[19]HA[3]KM[0.50]TM[10]OT[1/7 Canadian]\n"
           "PW[RoyalCrown]PB[Gelya]WR[6d]BR[3d]DT[2017-09-18]PC[The KGS Go Server at http://www.gokgs.com/]"
-          "AB[pd][dp][pp]C[Gelya [3d\]: hi\n]RE[B+3.50]")
+          "AB[pd][dp][pp]C[Gelya [3d\]: hi\n]RE[B+3.50];")
 }
 
 
 class Node:
     def __init__(self, prop_list=None):
-        if prop_list is None:
-            self.prop_list = []
-        self.prop_list = prop_list
+        self.prop_list = prop_list if prop_list is not None else []
         self.order = []
+
+    def __str__(self):
+        return ';' + "".join([str(x) for x in self.prop_list])
+
+    def add_property(self, prop: Property):
+        self.prop_list.append(prop)
+
+
+def parse_node(data):
+    index = 0
+    data_len = len(data)
+    node = Node()
+    rePropertyEnd = re.compile(r"\]")
+    while index < data_len:
+        match = reNodeContents.match(data, index)
+        if match:
+            print(data[index:match.end()])
+            index = match.end()
+        else:
+            break
+
+node = Node([Property('C', ['Hi']), Property('B', ['cc'])])
+for node in node_dict:
+    print(parse_node(node_dict[node]))
