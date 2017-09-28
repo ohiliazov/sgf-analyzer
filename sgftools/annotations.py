@@ -145,8 +145,8 @@ def annotate_sgf(cursor, comment, labels_values=None, triangle_values=None):
     Add comment, labels and triangles to node
     """
     node_comment = cursor.node.get('C')
-    node_labels = cursor.node.get('C')
-    node_triangles = cursor.node.get('C')
+    node_labels = cursor.node.get('LB')
+    node_triangles = cursor.node.get('TR')
 
     # Add comment to existing property or create
     if node_comment:
