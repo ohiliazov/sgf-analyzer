@@ -27,6 +27,7 @@ stats_regex = r'([0-9]+) visits, ([0-9]+) nodes(?:, ([0-9]+) playouts)(?:, ([0-9
 bookmove_regex = r'([0-9]+) book moves, ([0-9]+) total positions'
 finished_regex = r'= ([A-Z][0-9]+|resign|pass)'
 
+log_file = 'logs.log'
 
 class Leela(object):
     """
@@ -116,10 +117,17 @@ class Leela(object):
         """
         so = self.stdout_thread.read_all_lines()
         se = self.stderr_thread.read_all_lines()
+
+        if config.defaults['log_to_file']:
+            utils.write_to_file(log_file, 'a', utils.join_list_into_str(so, ''))
+            time.sleep(0.01)
+            utils.write_to_file(log_file, 'a', utils.join_list_into_str(se, ''))
         return so, se
 
     @staticmethod
     def write_to_stdin(p, cmd=""):
+        if config.defaults['log_to_file']:
+            utils.write_to_file(log_file, 'a', utils.join_list_into_str(cmd, ''))
         p.stdin.write(cmd + "\n")
         p.stdin.flush()
 
