@@ -35,6 +35,7 @@ defaults = {
     'skip_white':           False,  # Skip analysis of white
     'skip_black':           False,  # Skip analysis of black
     'skip_checkpoints':     False,  # Skip existing checkpoints
+    'log_to_file':          False,  # Log all input/output to file
     'ckpt_dir': os.path.expanduser('~/.leela_checkpoints'),  # Path to directory to cache partially complete analyses
 }
 
@@ -159,3 +160,9 @@ parser.add_argument('--skip-checkpoints',
                     default=defaults['skip_checkpoints'],
                     action='store_true',
                     help="Do not use existing checkpoints. Mostly used for debug purpose.")
+
+parser.add_argument('--log',
+                    dest='log_to_file',
+                    default=defaults['log_to_file'],
+                    action='store_true',
+                    help="Save all input/output into log file.")
