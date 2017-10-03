@@ -113,7 +113,7 @@ def format_analysis(stats, move_list, this_move):
 
         for move_label, move in list(zip(abet, move_list)):
             comment += "%s -> Win%%: %.2f%% (%d visits) \n" \
-                       % (move_label, flip_winrate(move['winrate'], move['color']) * 100, move['visits'])
+                       % (move_label, move['winrate'] * 100, move['visits'])
 
     # Mark labels and skip passes
     label_values = []

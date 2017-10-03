@@ -1,8 +1,11 @@
-(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]RU[Japanese]SZ[19]KM[6.50]PW[White]PB[Black]
-;B[pd]C[test[];W[dp]C[test\]];B[pq]C[test(];W[dd]C[test)];B[fq]C[test;];W[cn];B[jp];W[qn]
-(;B[qp]
-(;W[pj];B[qh];W[on];B[pm];W[pn];B[mp])
-(;W[qk];B[qi]))
-(;B[po];W[rp];B[ql]TR[qn][rp]SQ[po][pq];W[pn]LB[on:A][qo:B]
-(;B[qo];W[ro];B[rm];W[rn];B[qq])
-(;B[on];W[om];B[nn];W[nm];B[mn])))
+(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]RU[Japanese]SZ[19]KM[6.50]PW[White]PB[Black];B[pd]C[test[];W[dp]C[test\]]
+;B[pq]C[test(];W[dd]C[test)];B[fq]C[test;];W[cn];B[jp];W[qn]
+    (;B[qp]
+        (;W[pj];B[qh];W[on];B[pm];W[pn];B[mp])
+        (;W[qk];B[qi])
+    )
+    (;B[po];W[rp];B[ql]TR[qn][rp]SQ[po][pq];W[pn]LB[on:A][qo:B]
+        (;B[qo];W[ro];B[rm];W[rn];B[qq])
+        (;B[on];W[om];B[nn];W[nm];B[mn])
+    )
+)
