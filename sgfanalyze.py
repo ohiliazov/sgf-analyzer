@@ -339,13 +339,13 @@ if __name__ == '__main__':
         # Store moves, requested for analysis and variations
         if node_comment:
             match = re.match(regex.comment_regex, node_comment.data[0])
+            if match:
+                if 'analyze' in match.group('node_comment'):
+                    comment_requests_analyze[move_num] = True
 
-            if 'analyze' in match.group('node_comment'):
-                comment_requests_analyze[move_num] = True
-
-            if 'variations' in match.group('node_comment'):
-                comment_requests_analyze[move_num] = True
-                comment_requests_variations[move_num] = True
+                if 'variations' in match.group('node_comment'):
+                    comment_requests_analyze[move_num] = True
+                    comment_requests_variations[move_num] = True
 
             # Wipe comments is needed
             if args.wipe_comments:
