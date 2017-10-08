@@ -495,7 +495,6 @@ if __name__ == '__main__':
         while not cursor.atEnd:
             cursor.next()
             move_num += 1
-            print([v for v in needs_variations])
 
             # Add move to history and get whose turn is now
             this_move = add_moves_to_leela(cursor, leela)
