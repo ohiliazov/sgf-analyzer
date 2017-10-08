@@ -460,11 +460,11 @@ class Leela(object):
         stats, move_list = self.parse(stdout, stderr)
 
         if self.verbosity > 0:
-            print("Chosen move: %s" % utils.convert_position(self.board_size, stats['chosen']), file=sys.stderr)
-
             if 'best' in stats:
                 print("Best move: %s" % utils.convert_position(self.board_size, stats['best']), file=sys.stderr)
                 print("Winrate: %.2f%%" % (stats['winrate'] * 100), file=sys.stderr)
                 print("Visits: %d" % stats['visits'], file=sys.stderr)
+            else:
+                print("Chosen move: %s" % utils.convert_position(self.board_size, stats['chosen']), file=sys.stderr)
 
         return stats, move_list

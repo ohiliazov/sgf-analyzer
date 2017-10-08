@@ -1,4 +1,5 @@
 from sgftools.sgflib import Property, Node
+from sgftools.utils import convert_position
 
 
 def insert_sequence(cursor, seq, data=None, callback=None):
@@ -41,15 +42,6 @@ def pos_is_pass(pos):
     return False
 
 
-def format_pos(pos, board_size):
-    # In an sgf file, passes are the empty string or tt
-    if pos_is_pass(pos):
-        return "pass"
-    if len(pos) != 2:
-        return pos
-    return "ABCDEFGHJKLMNOPQRSTUVXYZ"[ord(pos[0]) - ord('a')] + str(board_size - (ord(pos[1]) - ord('a')))
-
-
 def format_winrate(stats, move_list, board_size, next_game_move):
     comment = ""
     if 'winrate' in stats:
@@ -57,8 +49,9 @@ def format_winrate(stats, move_list, board_size, next_game_move):
     else:
         comment += "Overall black win%: not computed (Leela still in opening book)\n"
 
+    # Comment if leela preffered another next move
     if len(move_list) > 0 and move_list[0]['pos'] != next_game_move:
-        comment += "Leela's preferred next move: %s\n" % format_pos(move_list[0]['pos'], board_size)
+        comment += "Leela's preferred next move: %s\n" % convert_position(board_size, move_list[0]['pos'])
     else:
         comment += "\n"
 
@@ -70,28 +63,28 @@ def format_delta_info(delta, trans_delta, stats, this_move, board_size):
     LB_values = []
     if trans_delta <= -0.2:
         comment += "=================================\n"
-        comment += "Leela thinks %s is a big mistake!\n" % format_pos(this_move, board_size)
+        comment += "Leela thinks %s is a big mistake!\n" % convert_position(board_size, this_move)
         comment += "Winning percentage drops by %.2f%%!\n" % (-delta * 100)
         comment += "=================================\n"
         if not pos_is_pass(this_move):
             LB_values.append("%s:%s" % (this_move, "?"))
     elif trans_delta <= -0.1:
         comment += "=================================\n"
-        comment += "Leela thinks %s is a mistake!\n" % format_pos(this_move, board_size)
+        comment += "Leela thinks %s is a mistake!\n" % convert_position(board_size, this_move)
         comment += "Winning percentage drops by %.2f%%\n" % (-delta * 100)
         comment += "=================================\n"
         if not pos_is_pass(this_move):
             LB_values.append("%s:%s" % (this_move, "?"))
     elif trans_delta <= -0.05:
         comment += "=================================\n"
-        comment += "Leela thinks %s is not the best choice.\n" % format_pos(this_move, board_size)
+        comment += "Leela thinks %s is not the best choice.\n" % convert_position(board_size, this_move)
         comment += "Winning percentage drops by %.2f%%\n" % (-delta * 100)
         comment += "=================================\n"
         if not pos_is_pass(this_move):
             LB_values.append("%s:%s" % (this_move, "?"))
     elif trans_delta <= -0.025:
         comment += "=================================\n"
-        comment += "Leela slightly dislikes %s.\n" % format_pos(this_move, board_size)
+        comment += "Leela slightly dislikes %s.\n" % convert_position(board_size, this_move)
         comment += "=================================\n"
 
     comment += "\n"
@@ -103,8 +96,13 @@ def flip_winrate(wr, color):
 
 
 def format_analysis(stats, move_list, this_move):
+    """
+    Make comment with analysis information, such as number of visits and alternate moves winrates
+    :return: string
+    """
     abet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     comment = ""
+
     if 'bookmoves' in stats:
         comment += "==========================\n"
         comment += "Considered %d/%d bookmoves\n" % (stats['bookmoves'], stats['positions'])
@@ -115,32 +113,56 @@ def format_analysis(stats, move_list, this_move):
 
         for move_label, move in list(zip(abet, move_list)):
             comment += "%s -> Win%%: %.2f%% (%d visits) \n" \
-                       % (move_label, flip_winrate(move['winrate'], move['color']) * 100, move['visits'])
+                       % (move_label, move['winrate'] * 100, move['visits'])
 
-    # Check for pos being "" or "tt", values which indicate passes, and don't attempt to display markers for them
-    LB_values = ["%s:%s" % (mv['pos'], L) for L, mv in zip(abet, move_list) if mv['pos'] != "" and mv['pos'] != "tt"]
-    mvs = [mv['pos'] for mv in move_list]
-    TR_values = [this_move] if this_move not in mvs and this_move is not None and not pos_is_pass(this_move) else []
-    return comment, LB_values, TR_values
+    # Mark labels and skip passes
+    label_values = []
+    for move_label, move in zip(abet, move_list):
+        if move['pos'] not in ["", "tt"]:
+            label_values.append("%s:%s" % (move['pos'], move_label))
 
+    suggested_moves = [move['pos'] for move in move_list]
 
-def annotate_sgf(cursor, comment, LB_values, TR_values):
-    c_node = cursor.node
-    if c_node.has_key('C'):
-        c_node['C'].data[0] += comment
+    # Mark triangles
+    if this_move and this_move not in suggested_moves and not pos_is_pass(this_move):
+        triangle_values = [this_move]
     else:
-        c_node.add_property(Property('C', [comment]))
+        triangle_values = None
 
-    if len(LB_values) > 0:
-        c_node.add_property(Property('LB', LB_values))
+    return comment, label_values, triangle_values
 
-    if len(TR_values) > 0:
-        c_node.add_property(Property('TR', TR_values))
+
+def annotate_sgf(cursor, comment, labels_values=None, triangle_values=None):
+    """
+    Add comment, labels and triangles to node
+    """
+    node_comment = cursor.node.get('C')
+    node_labels = cursor.node.get('LB')
+    node_triangles = cursor.node.get('TR')
+
+    # Add comment to existing property or create
+    if node_comment:
+        node_comment.data[0] += comment
+    else:
+        cursor.node.add_property(Property('C', [comment]))
+
+    # Add labels
+    if labels_values:
+        if node_labels:
+            node_labels.data = labels_values
+        else:
+            cursor.node.add_property(Property('LB', labels_values))
+
+    # Add triangles
+    if triangle_values:
+        if node_triangles:
+            node_triangles.data = triangle_values
+        else:
+            cursor.node.add_property(Property('TR', triangle_values))
 
 
 def self_test_1():
     print(pos_is_pass(""), pos_is_pass("tt"), pos_is_pass('ab'))
-    print(format_pos("aa", 19), format_pos("jj", 19), format_pos("ss", 19))
 
 
 if __name__ == '__main__':
