@@ -2,7 +2,7 @@ import os
 import pickle
 import sys
 
-import config
+import arguments
 from sgftools import annotations, sgflib
 
 
@@ -12,7 +12,7 @@ def do_analyze(leela, base_dir, verbosity, seconds_per_search):
     # if verbosity > 2:
     #     print("Looking for checkpoint file: %s" % ckpt_fn, file=sys.stderr)
 
-    if os.path.exists(ckpt_fn) and not config.defaults['skip_checkpoints']:
+    if os.path.exists(ckpt_fn) and not arguments.defaults['skip_checkpoints']:
         if verbosity > 1:
             print("Loading checkpoint file: %s" % ckpt_fn, file=sys.stderr)
         with open(ckpt_fn, 'rb') as ckpt_file:
