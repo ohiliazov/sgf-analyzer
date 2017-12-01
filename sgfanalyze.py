@@ -202,7 +202,7 @@ if __name__ == '__main__':
                     (move_num in comment_requests_variations) or
                     ((move_num - 1) in comment_requests_variations)):
 
-                stats, move_list = do_analyze(leela, base_dir, args.verbosity, args.analyze_time)
+                stats, move_list, skipped = do_analyze(leela, base_dir, args.verbosity, args.analyze_time)
 
                 if 'winrate' in stats and stats['visits'] > 100:
                     collected_winrates[move_num] = (current_player, stats['winrate'])
@@ -271,6 +271,9 @@ if __name__ == '__main__':
 
                 # save to file results with analyzing main line
                 utils.write_to_file(sgf_fn_analyzed, 'w', sgf)
+
+                if args.win_graph and len(collected_winrates) > 0 and not skipped:
+                    utils.graph_winrates(collected_winrates, args.SGF_FILE)
 
                 refresh_progress_bar()
 

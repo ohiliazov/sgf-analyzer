@@ -24,7 +24,7 @@ defaults = {
     'nodes_per_variation':  5,      # How many nodes to explore in each variation tree
     'num_to_show':          0,      # Number of moves to show from the sequence of suggested moves
 
-    'win_graph':            False,  # Build pdf graph of win rate, must have matplotlib installed
+    'win_graph':            True,  # Build pdf graph of win rate, must have matplotlib installed
     'wipe_comments':        False,  # Remove existing comments from the main line of the SGF file
 
     'analyze_start':        0,      # Analyze game from given move
@@ -100,11 +100,10 @@ parser.add_argument('--num_to_show',
                     type=int,
                     help="Number of moves to show from the sequence of suggested moves (default=0)")
 
-parser.add_argument('--win-graph',
+parser.add_argument('--no-graph',
                     dest='win_graph',
-                    default=defaults['win_graph'],
-                    action='store_true',
-                    help="Build pdf graph of win rate, must have matplotlib installed")
+                    action='store_false',
+                    help="Do not build pdf graph of win rate, graph requires matplotlib installed")
 
 parser.add_argument('--wipe-comments',
                     dest='wipe_comments',
