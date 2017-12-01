@@ -19,12 +19,9 @@ ray_settings = [
 defaults = {
     'analyze_threshold':    0.05,   # Display analysis on moves losing approx at least this much win-rate
     'variations_threshold': 0.05,   # Explore variations on moves losing approx at least this much win-rate
-    'analyze_time':         10,     # How many seconds to use per game move analysis?
-    'variations_time':      30,     # How many seconds to use per variations analysis?
     'nodes_per_variation':  5,      # How many nodes to explore in each variation tree
     'num_to_show':          0,      # Number of moves to show from the sequence of suggested moves
 
-    'win_graph':            True,  # Build pdf graph of win rate, must have matplotlib installed
     'wipe_comments':        False,  # Remove existing comments from the main line of the SGF file
 
     'analyze_start':        0,      # Analyze game from given move
@@ -57,6 +54,18 @@ required.add_argument('--leela',
                       metavar="CMD",
                       help="Command to run Leela executable")
 
+parser.add_argument('--analyze-time',
+                    dest='analyze_time',
+                    default=config.analyze_time,
+                    type=int,
+                    help="How many seconds to use per move analysis")
+
+parser.add_argument('--variations-time',
+                    dest='variations_time',
+                    default=config.variations_time,
+                    type=int,
+                    help="How many seconds to use per variation analysis")
+
 parser.add_argument('--analyze-thresh',
                     dest='analyze_threshold',
                     default=defaults['analyze_threshold'],
@@ -72,20 +81,6 @@ parser.add_argument('--var-thresh',
                     metavar="T",
                     help="Explore variations on moves losing approx at least this much "
                          "win rate when the game is close")
-
-parser.add_argument('--analyze-time',
-                    dest='analyze_time',
-                    default=defaults['analyze_time'],
-                    type=int,
-                    metavar="S",
-                    help="How many seconds to use per move analysis")
-
-parser.add_argument('--vars-time',
-                    dest='variations_time',
-                    default=defaults['variations_time'],
-                    type=int,
-                    metavar="S",
-                    help="How many seconds to use per variation analysis")
 
 parser.add_argument('--nodes-per-var',
                     dest='nodes_per_variation',
