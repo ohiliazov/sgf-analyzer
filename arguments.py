@@ -27,7 +27,6 @@ defaults = {
     'analyze_start':        0,      # Analyze game from given move
     'analyze_end':          1000,   # Analyze game till given move
 
-    'restarts':             1,      # Number of restarts when bots crashes
     'stdev':                0.22,   # Default standard deviation
     'skip_white':           False,  # Skip analysis of white
     'skip_black':           False,  # Skip analysis of black
@@ -125,12 +124,6 @@ parser.add_argument('--cache',
                     metavar="DIR",
                     default=defaults['ckpt_dir'],
                     help="Set a directory to cache partially complete analyses, default ~/.leela_checkpoints")
-
-parser.add_argument('--restarts',
-                    default=defaults['restarts'],
-                    type=int,
-                    metavar="N",
-                    help="If leela crashes, retry the analysis step this many times before reporting a failure")
 
 parser.add_argument('--skip-white',
                     dest='skip_white',

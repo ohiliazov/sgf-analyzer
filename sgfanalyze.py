@@ -33,9 +33,8 @@ if __name__ == '__main__':
 
     if not os.path.exists(sgf_fn):
         arguments.parser.error("No such file: %s" % sgf_fn)
-    sgf = gotools.import_sgf(sgf_fn)
 
-    RESTART_COUNT = args.restarts
+    sgf = gotools.import_sgf(sgf_fn)
 
     if not os.path.exists(args.ckpt_dir):
         os.mkdir(args.ckpt_dir)
