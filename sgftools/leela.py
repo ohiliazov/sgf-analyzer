@@ -118,15 +118,14 @@ class Leela(object):
         se = self.stderr_thread.read_all_lines()
 
         if config.path_to_log:
-            utils.write_to_file(config.path_to_log, 'a', utils.join_list_into_str(so, ''))
-            time.sleep(0.01)
-            utils.write_to_file(config.path_to_log, 'a', utils.join_list_into_str(se, ''))
+            utils.write_to_file(config.path_to_log, 'a', "".join(so))
+            utils.write_to_file(config.path_to_log, 'a', "".join(se))
         return so, se
 
     @staticmethod
     def write_to_stdin(p, cmd=""):
         if config.path_to_log:
-            utils.write_to_file(config.path_to_log, 'a', utils.join_list_into_str(cmd, ''))
+            utils.write_to_file(config.path_to_log, 'a', "".join(cmd)+'\n')
         p.stdin.write(cmd + "\n")
         p.stdin.flush()
 

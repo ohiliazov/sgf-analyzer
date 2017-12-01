@@ -85,28 +85,6 @@ def graph_winrates(winrates, sgf_fn):
     plt.savefig(file_name, dpi=200, format='pdf', bbox_inches='tight')
 
 
-def list_filter(list_to_filter, filter_list):
-    """
-    Filter given list to exclude elements, mentioned in filter_list
-    :param list_to_filter: list
-    :param filter_list: list
-
-    :return: list
-    """
-    return list(filter(lambda x: len(x) != 0 and x not in filter_list, list_to_filter))
-
-
-def join_list_into_str(list_to_join, separator):
-    """
-    Convert list into string, avoid printing in console [brackets]
-    :param list_to_join: list
-    :param separator: str
-
-    :return: string
-    """
-    return separator.join(map(str, list_to_join))
-
-
 def winrate_transformer(stdev, verbosity):
     """
     Make a function that applies a transform to the winrate that stretches out the middle
