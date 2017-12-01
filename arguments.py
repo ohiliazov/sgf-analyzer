@@ -1,5 +1,6 @@
 import os
 import argparse
+import config
 
 
 # For leela setting, review its docs
@@ -28,7 +29,6 @@ defaults = {
 
     'analyze_start':        0,      # Analyze game from given move
     'analyze_end':          1000,   # Analyze game till given move
-    'verbosity':            0,      # Set the verbosity level, 0: progress, 1: progress+status, 2: progress+status+state
 
     'restarts':             1,      # Number of restarts when bots crashes
     'stdev':                0.22,   # Default standard deviation
@@ -46,15 +46,20 @@ required = parser.add_argument_group('required named arguments')
 parser.add_argument("SGF_FILE",
                     help="SGF file to analyze")
 
+parser.add_argument('-v', '--verbosity',
+                    default=config.verbosity,
+                    type=int,
+                    help="Set the verbosity level, 0: progress only, 1: progress+status, 2: progress+status+state")
+
+required.add_argument('--leela',
+                      default=config.path_to_leela,
+                      dest='path_to_leela',
+                      metavar="CMD",
+                      help="Command to run Leela executable")
+
 parser.add_argument("--save_to_file",
                     dest='save_to_file',
                     help="File to save results of analyze, if skipped - use source filename with adding 'analyzed'")
-
-required.add_argument('--leela',
-                      required=True,
-                      dest='executable',
-                      metavar="CMD",
-                      help="Command to run Leela executable")
 
 parser.add_argument('--analyze-thresh',
                     dest='analyze_threshold',
@@ -124,12 +129,6 @@ parser.add_argument('--stop',
                     type=int,
                     metavar="MOVENUM",
                     help="Analyze game stopping at this move (default=1000)")
-
-parser.add_argument('-v', '--verbosity',
-                    default=defaults['verbosity'],
-                    type=int,
-                    metavar="V",
-                    help="Set the verbosity level, 0: progress only, 1: progress+status, 2: progress+status+state")
 
 parser.add_argument('--cache',
                     dest='ckpt_dir',

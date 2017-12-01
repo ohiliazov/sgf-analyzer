@@ -7,6 +7,7 @@ import time
 import traceback
 
 import arguments
+import config
 import sgftools.utils as utils
 from analyzetools.analyze import do_analyze, do_variations
 from analyzetools.leelatools import add_moves_to_leela, calculate_tasks_left
@@ -171,7 +172,7 @@ if __name__ == '__main__':
 
 
     leela = Leela(board_size=board_size,
-                  executable=args.executable,
+                  executable=args.path_to_leela,
                   is_handicap_game=is_handicap_game,
                   komi=komi,
                   seconds_per_search=args.analyze_time,
