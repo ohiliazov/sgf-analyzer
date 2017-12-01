@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 
-import arguments
+import arguments, config
 import sgftools.utils as utils
 from analyzetools.analyze import do_analyze, do_variations
 from analyzetools.leelatools import add_moves_to_leela, calculate_tasks_left
@@ -28,20 +28,19 @@ if __name__ == '__main__':
         print("Game moves analysis: %d seconds per move" % args.analyze_time, file=sys.stderr)
         print("Variations analysis: %d seconds per move" % args.variations_time, file=sys.stderr)
 
-    sgf_fn = args.SGF_FILE
+    sgf_fn = args.path_to_sgf
     sgf_fn_analyzed = "_analyzed".join(os.path.splitext(sgf_fn))
 
     if not os.path.exists(sgf_fn):
         arguments.parser.error("No such file: %s" % sgf_fn)
+
     sgf = gotools.import_sgf(sgf_fn)
 
-    RESTART_COUNT = args.restarts
-
-    if not os.path.exists(args.ckpt_dir):
-        os.mkdir(args.ckpt_dir)
+    if not os.path.exists(config.checkpoint_dir):
+        os.mkdir(config.checkpoint_dir)
 
     base_hash = hashlib.md5(os.path.abspath(sgf_fn).encode()).hexdigest()
-    base_dir = os.path.join(args.ckpt_dir, base_hash)
+    base_dir = os.path.join(config.checkpoint_dir, base_hash)
 
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
@@ -148,7 +147,7 @@ if __name__ == '__main__':
         )
 
 
-    transform_winrate = utils.winrate_transformer(arguments.defaults['stdev'], args.verbosity)
+    transform_winrate = utils.winrate_transformer(config.stdev, args.verbosity)
 
     analyze_threshold = transform_winrate(0.5 + 0.5 * args.analyze_threshold) - \
                         transform_winrate(0.5 - 0.5 * args.analyze_threshold)
@@ -273,7 +272,7 @@ if __name__ == '__main__':
                 utils.write_to_file(sgf_fn_analyzed, 'w', sgf)
 
                 if args.win_graph and len(collected_winrates) > 0 and not skipped:
-                    utils.graph_winrates(collected_winrates, args.SGF_FILE)
+                    utils.graph_winrates(collected_winrates, sgf_fn)
 
                 refresh_progress_bar()
 
@@ -288,7 +287,7 @@ if __name__ == '__main__':
         leela.clear_history()
 
         if args.win_graph:
-            utils.graph_winrates(collected_winrates, args.SGF_FILE)
+            utils.graph_winrates(collected_winrates, sgf_fn)
 
         # Now fill in variations for everything we need (suggested variations)
         move_num = -1

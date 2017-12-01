@@ -3,7 +3,7 @@ import re
 import time
 import hashlib
 from subprocess import Popen, PIPE
-import arguments
+import config
 import sgftools.readerthread as rt
 import sgftools.utils as utils
 
@@ -27,7 +27,6 @@ stats_regex = r'([0-9]+) visits, ([0-9]+) nodes(?:, ([0-9]+) playouts)(?:, ([0-9
 bookmove_regex = r'([0-9]+) book moves, ([0-9]+) total positions'
 finished_regex = r'= ([A-Z][0-9]+|resign|pass)'
 
-log_file = 'logs.log'
 
 class Leela(object):
     """
@@ -118,16 +117,16 @@ class Leela(object):
         so = self.stdout_thread.read_all_lines()
         se = self.stderr_thread.read_all_lines()
 
-        if arguments.defaults['log_to_file']:
-            utils.write_to_file(log_file, 'a', utils.join_list_into_str(so, ''))
+        if config.path_to_log:
+            utils.write_to_file(config.path_to_log, 'a', utils.join_list_into_str(so, ''))
             time.sleep(0.01)
-            utils.write_to_file(log_file, 'a', utils.join_list_into_str(se, ''))
+            utils.write_to_file(config.path_to_log, 'a', utils.join_list_into_str(se, ''))
         return so, se
 
     @staticmethod
     def write_to_stdin(p, cmd=""):
-        if arguments.defaults['log_to_file']:
-            utils.write_to_file(log_file, 'a', utils.join_list_into_str(cmd, ''))
+        if config.path_to_log:
+            utils.write_to_file(config.path_to_log, 'a', utils.join_list_into_str(cmd, ''))
         p.stdin.write(cmd + "\n")
         p.stdin.flush()
 
@@ -175,7 +174,7 @@ class Leela(object):
         if self.verbosity > 0:
             print("Starting leela...", file=sys.stderr)
 
-        p = Popen([self.executable] + arguments.leela_settings, stdout=PIPE, stdin=PIPE, stderr=PIPE,
+        p = Popen([self.executable] + config.leela_settings, stdout=PIPE, stdin=PIPE, stderr=PIPE,
                   universal_newlines=True)
 
         self.p = p
