@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 
-import config
+import arguments
 import sgftools.utils as utils
 from analyzetools.analyze import do_analyze, do_variations
 from analyzetools.leelatools import add_moves_to_leela, calculate_tasks_left
@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     time_start = datetime.datetime.now()
 
-    args = config.parser.parse_args()
+    args = arguments.parser.parse_args()
 
     if args.verbosity > 0:
         print("Leela analysis started at %s" % time_start, file=sys.stderr)
@@ -36,7 +36,7 @@ if __name__ == '__main__':
         args.save_to_file = "_analyzed".join(os.path.splitext(sgf_fn))
 
     if not os.path.exists(sgf_fn):
-        config.parser.error("No such file: %s" % (sgf_fn))
+        arguments.parser.error("No such file: %s" % (sgf_fn))
     sgf = gotools.import_sgf(sgf_fn)
 
     RESTART_COUNT = args.restarts
@@ -71,8 +71,8 @@ if __name__ == '__main__':
     if board_size != 19:
         print("Warning: board size is not 19 so Leela could be much weaker and less accurate", file=sys.stderr)
 
-        if args.analyze_threshold == config.defaults['analyze_threshold'] \
-                or args.variations_threshold == config.defaults['variations_threshold']:
+        if args.analyze_threshold == arguments.defaults['analyze_threshold'] \
+                or args.variations_threshold == arguments.defaults['variations_threshold']:
             print("Warning: Consider also setting --analyze-thresh and --var-thresh higher", file=sys.stderr)
 
     # Set handicap stones count
@@ -152,7 +152,7 @@ if __name__ == '__main__':
         )
 
 
-    transform_winrate = utils.winrate_transformer(config.defaults['stdev'], args.verbosity)
+    transform_winrate = utils.winrate_transformer(arguments.defaults['stdev'], args.verbosity)
 
     analyze_threshold = transform_winrate(0.5 + 0.5 * args.analyze_threshold) - \
                         transform_winrate(0.5 - 0.5 * args.analyze_threshold)
