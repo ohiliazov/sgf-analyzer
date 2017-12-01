@@ -40,7 +40,7 @@ defaults = {
 parser = argparse.ArgumentParser()
 required = parser.add_argument_group('required named arguments')
 
-parser.add_argument("SGF_FILE",
+parser.add_argument("path_to_sgf",
                     help="SGF file to analyze")
 
 parser.add_argument('-v', '--verbosity',

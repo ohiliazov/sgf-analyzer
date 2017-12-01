@@ -28,7 +28,7 @@ if __name__ == '__main__':
         print("Game moves analysis: %d seconds per move" % args.analyze_time, file=sys.stderr)
         print("Variations analysis: %d seconds per move" % args.variations_time, file=sys.stderr)
 
-    sgf_fn = args.SGF_FILE
+    sgf_fn = args.path_to_sgf
     sgf_fn_analyzed = "_analyzed".join(os.path.splitext(sgf_fn))
 
     if not os.path.exists(sgf_fn):
@@ -273,7 +273,7 @@ if __name__ == '__main__':
                 utils.write_to_file(sgf_fn_analyzed, 'w', sgf)
 
                 if args.win_graph and len(collected_winrates) > 0 and not skipped:
-                    utils.graph_winrates(collected_winrates, args.SGF_FILE)
+                    utils.graph_winrates(collected_winrates, sgf_fn)
 
                 refresh_progress_bar()
 
@@ -288,7 +288,7 @@ if __name__ == '__main__':
         leela.clear_history()
 
         if args.win_graph:
-            utils.graph_winrates(collected_winrates, args.SGF_FILE)
+            utils.graph_winrates(collected_winrates, sgf_fn)
 
         # Now fill in variations for everything we need (suggested variations)
         move_num = -1
