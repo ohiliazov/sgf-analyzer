@@ -57,10 +57,6 @@ required.add_argument('--leela',
                       metavar="CMD",
                       help="Command to run Leela executable")
 
-parser.add_argument("--save_to_file",
-                    dest='save_to_file',
-                    help="File to save results of analyze, if skipped - use source filename with adding 'analyzed'")
-
 parser.add_argument('--analyze-thresh',
                     dest='analyze_threshold',
                     default=defaults['analyze_threshold'],

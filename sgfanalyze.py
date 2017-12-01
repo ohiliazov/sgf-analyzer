@@ -7,7 +7,6 @@ import time
 import traceback
 
 import arguments
-import config
 import sgftools.utils as utils
 from analyzetools.analyze import do_analyze, do_variations
 from analyzetools.leelatools import add_moves_to_leela, calculate_tasks_left
@@ -30,14 +29,10 @@ if __name__ == '__main__':
         print("Variations analysis: %d seconds per move" % args.variations_time, file=sys.stderr)
 
     sgf_fn = args.SGF_FILE
-
-    # if no file name to save analyze results provided - it will use original source file with concat 'analyzed'
-    if not args.save_to_file:
-        # FIXME: possible bug with folders which contain "." in their names
-        args.save_to_file = "_analyzed".join(os.path.splitext(sgf_fn))
+    sgf_fn_analyzed = "_analyzed".join(os.path.splitext(sgf_fn))
 
     if not os.path.exists(sgf_fn):
-        arguments.parser.error("No such file: %s" % (sgf_fn))
+        arguments.parser.error("No such file: %s" % sgf_fn)
     sgf = gotools.import_sgf(sgf_fn)
 
     RESTART_COUNT = args.restarts
@@ -275,7 +270,7 @@ if __name__ == '__main__':
                 analyze_tasks_initial_done += 1
 
                 # save to file results with analyzing main line
-                utils.write_to_file(args.save_to_file, 'w', sgf)
+                utils.write_to_file(sgf_fn_analyzed, 'w', sgf)
 
                 refresh_progress_bar()
 
@@ -324,7 +319,7 @@ if __name__ == '__main__':
             variations_tasks_done += 1
 
             # save to file results with analyzing variations
-            utils.write_to_file(args.save_to_file, 'w', sgf)
+            utils.write_to_file(sgf_fn_analyzed, 'w', sgf)
 
             refresh_progress_bar()
     except:
@@ -336,7 +331,7 @@ if __name__ == '__main__':
     progress_bar.finish()
 
     # Save final results into file
-    utils.write_to_file(args.save_to_file, 'w', sgf)
+    utils.write_to_file(sgf_fn_analyzed, 'w', sgf)
 
     time_stop = datetime.datetime.now()
 
