@@ -1,0 +1,5 @@
+bots/*
+venv/*
+.idea/*
+__pycache__
+test_sgf/*_analyzed.sgf
