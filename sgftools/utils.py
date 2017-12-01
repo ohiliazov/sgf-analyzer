@@ -1,5 +1,6 @@
 import math
 import sys
+import os
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -44,8 +45,7 @@ def parse_position(board_size, pos):
     return "%s%s" % (SGF_COORD[x], SGF_COORD[y])
 
 
-def graph_winrates(winrates, file_to_save):
-    mpl.use('Agg')
+def graph_winrates(winrates, sgf_fn):
 
     x = []
     y = []
@@ -81,7 +81,7 @@ def graph_winrates(winrates, file_to_save):
     plt.ylabel("Win Rate", fontsize=12)
 
     # in this script for pdf it use the same file name as provided sgf file to avoid extra parameters
-    file_name = file_to_save.split('.')[0] + '_graph.pdf'
+    file_name = f"{os.path.splitext(sgf_fn)[0]}_graph.pdf"
     plt.savefig(file_name, dpi=200, format='pdf', bbox_inches='tight')
 
 
