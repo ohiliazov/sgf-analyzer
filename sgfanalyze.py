@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 
-import arguments
+import arguments, config
 import sgftools.utils as utils
 from analyzetools.analyze import do_analyze, do_variations
 from analyzetools.leelatools import add_moves_to_leela, calculate_tasks_left
@@ -36,11 +36,11 @@ if __name__ == '__main__':
 
     sgf = gotools.import_sgf(sgf_fn)
 
-    if not os.path.exists(args.ckpt_dir):
-        os.mkdir(args.ckpt_dir)
+    if not os.path.exists(config.checkpoint_dir):
+        os.mkdir(config.checkpoint_dir)
 
     base_hash = hashlib.md5(os.path.abspath(sgf_fn).encode()).hexdigest()
-    base_dir = os.path.join(args.ckpt_dir, base_hash)
+    base_dir = os.path.join(config.checkpoint_dir, base_hash)
 
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
@@ -147,7 +147,7 @@ if __name__ == '__main__':
         )
 
 
-    transform_winrate = utils.winrate_transformer(arguments.defaults['stdev'], args.verbosity)
+    transform_winrate = utils.winrate_transformer(config.stdev, args.verbosity)
 
     analyze_threshold = transform_winrate(0.5 + 0.5 * args.analyze_threshold) - \
                         transform_winrate(0.5 - 0.5 * args.analyze_threshold)

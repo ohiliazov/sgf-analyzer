@@ -32,11 +32,12 @@ Some of available options:
 
     --analyze-time    - How many seconds to use per game moves analysis (default=30)
     --variations-time - How many seconds to use per variations analysis (default=15)
-    --var-thresh      - Explore variations on moves losing at least this much of win rate (default=0.03)
-    --analyze-thresh  - Display analysis on moves losing at least this much of win rate (default=0.03)    
-    --nodes-per-var   - Number of nodes to explore (depth) in each variation tree (default=8)
-    --num_to_show     - Number of moves to show in addition to nodes-per-var, 
-                        helps to clean-up irrational variations (default=0) 
+    --var-thresh      - Explore variations on moves losing at least this much of win rate (default=0.05)
+    --analyze-thresh  - Display analysis on moves losing at least this much of win rate (default=0.05)    
+    --nodes-per-var   - Number of nodes to explore (depth) in each variation tree (default=5)
+    --num_to_show     - Number of moves to show from suggested perfect variations (default=0)
+    --start           - Analyze game starting at this move (default=0)
+    --stop            - Analyze game stopping at this move (default=infinity)
     --wipe-comments   - Remove existing comments from the main line of the SGF file
     --no-graph        - Do not build nice pdf graph of win rate progress
     --verbosity       - Set the verbosity level
