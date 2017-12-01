@@ -17,11 +17,6 @@ ray_settings = [
 ]
 
 defaults = {
-    'analyze_threshold':    0.05,   # Display analysis on moves losing approx at least this much win-rate
-    'variations_threshold': 0.05,   # Explore variations on moves losing approx at least this much win-rate
-    'nodes_per_variation':  5,      # How many nodes to explore in each variation tree
-    'num_to_show':          0,      # Number of moves to show from the sequence of suggested moves
-
     'wipe_comments':        False,  # Remove existing comments from the main line of the SGF file
 
     'analyze_start':        0,      # Analyze game from given move
@@ -67,30 +62,27 @@ parser.add_argument('--variations-time',
 
 parser.add_argument('--analyze-thresh',
                     dest='analyze_threshold',
-                    default=defaults['analyze_threshold'],
+                    default=config.analyze_threshold,
                     type=float,
-                    metavar="T",
                     help="Display analysis on moves losing approx at least this much "
                          "win rate when the game is close")
 
 parser.add_argument('--var-thresh',
                     dest='variations_threshold',
-                    default=defaults['variations_threshold'],
+                    default=config.variations_threshold,
                     type=float,
-                    metavar="T",
                     help="Explore variations on moves losing approx at least this much "
                          "win rate when the game is close")
 
 parser.add_argument('--nodes-per-var',
                     dest='nodes_per_variation',
-                    default=defaults['nodes_per_variation'],
+                    default=config.nodes_per_variation,
                     type=int,
-                    metavar="N",
                     help="How many nodes to explore with leela in each variation tree (default=8)")
 
 parser.add_argument('--num_to_show',
                     dest='num_to_show',
-                    default=defaults['num_to_show'],
+                    default=config.num_to_show,
                     type=int,
                     help="Number of moves to show from the sequence of suggested moves (default=0)")
 
