@@ -42,14 +42,6 @@ if __name__ == '__main__':
         return analyze_tasks + (variations_tasks * args.nodes_per_variation)
 
 
-    transform_winrate = utils.winrate_transformer(config.stdev, args.verbosity)
-
-    analyze_threshold = transform_winrate(0.5 + 0.5 * args.analyze_threshold) - \
-                        transform_winrate(0.5 - 0.5 * args.analyze_threshold)
-
-    variations_threshold = transform_winrate(0.5 + 0.5 * args.variations_threshold) - \
-                           transform_winrate(0.5 - 0.5 * args.variations_threshold)
-
     print("Executing approx %d analysis steps" % approx_tasks_max(), file=sys.stderr)
 
     progress_bar = progressbar.ProgressBar(max_value=approx_tasks_max())
@@ -106,22 +98,17 @@ if __name__ == '__main__':
                     collected_best_move_winrates[move_num] = move_list[0]['winrate']
 
                 delta = 0.0
-                transdelta = 0.0
 
                 if 'winrate' in stats and (move_num - 1) in collected_best_moves:
                     if this_move != collected_best_moves[move_num - 1]:
                         delta = stats['winrate'] - collected_best_move_winrates[move_num - 1]
                         delta = min(0.0, (-delta if leela.whose_turn() == "black" else delta))
-                        transdelta = transform_winrate(stats['winrate']) - \
-                                     transform_winrate(collected_best_move_winrates[move_num - 1])
-                        transdelta = min(0.0, (-transdelta if leela.whose_turn() == "black" else transdelta))
 
-                    if transdelta <= -analyze_threshold:
-                        (delta_comment, delta_lb_values) = annotations.format_delta_info(delta, transdelta, stats,
-                                                                                         this_move, board_size)
+                    if delta <= -args.analyze_threshold:
+                        (delta_comment, delta_lb_values) = annotations.format_delta_info(delta, this_move, board_size)
                         annotations.annotate_sgf(cursor, delta_comment, delta_lb_values, [])
 
-                if has_prev and (transdelta <= -variations_threshold or (move_num - 1) in variations_request):
+                if has_prev and (delta <= -args.variations_threshold or (move_num - 1) in variations_request):
                     if not (args.skip_white and prev_player == "white") and not (
                             args.skip_black and prev_player == "black"):
                         needs_variations[move_num - 1] = (prev_stats, prev_move_list)
@@ -147,7 +134,7 @@ if __name__ == '__main__':
                                          [], [])
 
                 if has_prev and ((move_num - 1) in analyze_request or (
-                        move_num - 1) in variations_request or transdelta <= -analyze_threshold):
+                        move_num - 1) in variations_request or delta <= -args.analyze_threshold):
                     if not (args.skip_white and prev_player == "white") and not (
                             args.skip_black and prev_player == "black"):
                         (analysis_comment, lb_values, tr_values) = annotations.format_analysis(prev_stats,
