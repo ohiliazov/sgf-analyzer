@@ -59,24 +59,18 @@ if __name__ == '__main__':
     # Calculate initial tasks
     (analyze_tasks_initial, variations_tasks_initial) = calculate_tasks_left(sgf, comment_requests_analyze,
                                                                              comment_requests_variations, args)
-    variations_task_probability = 1.0 / (1.0 + args.variations_threshold * 100.0)
-    analyze_tasks_initial_done = 0
+
     variations_tasks = variations_tasks_initial
+    analyze_tasks_initial_done = 0
     variations_tasks_done = 0
 
 
     def approx_tasks_done():
-        return (
-                analyze_tasks_initial_done +
-                (variations_tasks_done * args.nodes_per_variation)
-        )
+        return analyze_tasks_initial_done + (variations_tasks_done * args.nodes_per_variation)
 
 
     def approx_tasks_max():
-        return ((analyze_tasks_initial - analyze_tasks_initial_done) *
-                (1 + variations_task_probability * args.nodes_per_variation) +
-                analyze_tasks_initial_done +
-                (variations_tasks * args.nodes_per_variation))
+        return analyze_tasks_initial + (variations_tasks * args.nodes_per_variation)
 
 
     transform_winrate = utils.winrate_transformer(config.stdev, args.verbosity)
