@@ -1,15 +1,5 @@
 import numpy as np
-from sgftools.sgflib import SGFParser, Property, Node
-
-
-def import_sgf(filename):
-    data = ""
-    with open(filename, 'r', encoding="utf-8") as sgf_file:
-        for line in sgf_file:
-            data += line
-
-    parser = SGFParser(data)
-    return parser.parse()
+from sgftools.sgflib import Property, Node
 
 
 def split_continuations(sgf):

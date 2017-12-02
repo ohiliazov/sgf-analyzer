@@ -2,12 +2,17 @@ import math
 import sys
 import os
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
 SGF_COORD = 'abcdefghijklmnopqrstuvwxy'
 BOARD_COORD = 'abcdefghjklmnopqrstuvwxyz'  # without "i"
+
+
+def save_to_file(sgf_fn, content):
+    path_to_save = "_analyzed".join(os.path.splitext(sgf_fn))
+    with open(path_to_save, mode='w', encoding='utf-8') as f:
+        f.write(str(content))
 
 
 def convert_position(board_size, pos):
@@ -38,7 +43,6 @@ def parse_position(board_size, pos):
 
 
 def graph_winrates(winrates, sgf_fn):
-
     x = []
     y = []
 

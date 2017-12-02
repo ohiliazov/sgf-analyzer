@@ -103,10 +103,6 @@ class Collection(List):
         """ Returns a 'Cursor' object for navigation of the given 'GameTree'."""
         return Cursor(self[game_num])
 
-    def save_to_file(self, path_to_save):
-        with open(path_to_save, mode='w', encoding='utf-8') as f:
-            f.write(str(self))
-
 
 class Property(List):
     """

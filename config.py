@@ -1,6 +1,7 @@
 import os
+
 # Set verbosity level: 0: progress, 1: progress+status, 2: progress+status+state, 3: progress+status+state+stdout+stderr
-verbosity = 0
+verbosity = 2
 stdev = 0.22
 
 # Paths
@@ -12,7 +13,7 @@ skip_checkpoints = False
 path_to_log = './leela.log'
 
 # Set time for main line and variations analysis
-analyze_time = 30
+analyze_time = 10
 variations_time = 15
 
 # Set desired threshold for displaying analysis and exploring suggested variations
@@ -28,7 +29,4 @@ analyze_start = 0
 analyze_end = float('inf')
 
 # For leela setting, review its docs
-leela_settings = [
-    '--gtp',
-    '--noponder'
-]
+leela_settings = ['--gtp', '--noponder']

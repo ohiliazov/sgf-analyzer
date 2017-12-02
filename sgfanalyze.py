@@ -1,18 +1,19 @@
 import datetime
-import hashlib
-import os
 import re
 import sys
 import time
 import traceback
 
-import arguments, config
+import arguments
+import config
 import sgftools.utils as utils
 from analyzetools.analyze import do_analyze, do_variations
 from analyzetools.leelatools import add_moves_to_leela, calculate_tasks_left
-from sgftools import gotools, annotations, progressbar
+from analyzetools.preparation import prepare_sgf, get_initial_values
+from sgftools import annotations, progressbar
 from sgftools import regex
 from sgftools.leela import Leela
+from sgftools.utils import save_to_file
 
 default_analyze_thresh = 0.010
 default_var_thresh = 0.010
@@ -22,79 +23,16 @@ if __name__ == '__main__':
     time_start = datetime.datetime.now()
 
     args = arguments.parser.parse_args()
+    sgf_fn, sgf, base_dir = prepare_sgf(args)
 
-    if args.verbosity > 0:
-        print("Leela analysis started at %s" % time_start, file=sys.stderr)
-        print("Game moves analysis: %d seconds per move" % args.analyze_time, file=sys.stderr)
-        print("Variations analysis: %d seconds per move" % args.variations_time, file=sys.stderr)
-
-    sgf_fn = args.path_to_sgf
-    sgf_fn_analyzed = "_analyzed".join(os.path.splitext(sgf_fn))
-
-    if not os.path.exists(sgf_fn):
-        arguments.parser.error("No such file: %s" % sgf_fn)
-
-    sgf = gotools.import_sgf(sgf_fn)
-
-    if not os.path.exists(config.checkpoint_dir):
-        os.mkdir(config.checkpoint_dir)
-
-    base_hash = hashlib.md5(os.path.abspath(sgf_fn).encode()).hexdigest()
-    base_dir = os.path.join(config.checkpoint_dir, base_hash)
-
-    if not os.path.exists(base_dir):
-        os.mkdir(base_dir)
-
-    if args.verbosity > 1:
-        print("Checkpoint dir: %s" % base_dir, file=sys.stderr)
-
-    comment_requests_analyze = {}  # will contain move numbers that should be analyzed
-    comment_requests_variations = {}  # will contain move numbers that should be analyzed with variations
-
-    # Set up SGF cursor
+    # Set up SGF cursor and get values from first node
     cursor = sgf.cursor()
-
-    # Get initial nodes
-    node_boardsize = cursor.node.get('SZ')
-    node_handicap = cursor.node.get('HA')
-    node_rules = cursor.node.get('RU')
-    node_komi = cursor.node.get('KM')
-
-    # Set board size
-    board_size = int(node_boardsize.data[0]) if node_boardsize else 19
-
-    if board_size != 19:
-        print("Warning: board size is not 19 so Leela could be much weaker and less accurate", file=sys.stderr)
-
-    # Set handicap stones count
-    if node_handicap and int(node_handicap.data[0]) > 1:
-        handicap_stone_count = int(node_handicap.data[0])
-    else:
-        handicap_stone_count = 0
-
-    is_handicap_game = bool(handicap_stone_count)
-
-    # Set rules
-    is_japanese_rules = node_rules and node_rules.data[0].lower() in ['jp', 'japanese', 'japan']
-
-    # Set komi
-    if node_komi:
-        komi = float(node_komi.data[0])
-
-        if is_handicap_game and is_japanese_rules:
-            old_komi = komi
-            komi = old_komi + handicap_stone_count
-            print("Adjusting komi from %.1f to %.1f in converting Japanese rules with %d handicap to Chinese rules" % (
-                old_komi, komi, handicap_stone_count), file=sys.stderr)
-    else:
-        if is_handicap_game:
-            komi = 0.5
-        else:
-            komi = 6.5 if is_japanese_rules else 7.5
-        print("Warning: Komi not specified, assuming %.1f" % komi, file=sys.stderr)
+    board_size, handicap_stone_count, is_handicap_game, is_japanese_rules, komi = get_initial_values(cursor)
 
     # First loop for comments parsing
     move_num = -1
+    comment_requests_analyze = {}  # will contain move numbers that should be analyzed
+    comment_requests_variations = {}  # will contain move numbers that should be analyzed with variations
     while not cursor.atEnd:
 
         # Go to next node and increment move_num
@@ -129,18 +67,16 @@ if __name__ == '__main__':
 
     def approx_tasks_done():
         return (
-            analyze_tasks_initial_done +
-            (variations_tasks_done * args.nodes_per_variation)
+                analyze_tasks_initial_done +
+                (variations_tasks_done * args.nodes_per_variation)
         )
 
 
     def approx_tasks_max():
-        return (
-            (analyze_tasks_initial - analyze_tasks_initial_done) *
-            (1 + variations_task_probability * args.nodes_per_variation) +
-            analyze_tasks_initial_done +
-            (variations_tasks * args.nodes_per_variation)
-        )
+        return ((analyze_tasks_initial - analyze_tasks_initial_done) *
+                (1 + variations_task_probability * args.nodes_per_variation) +
+                analyze_tasks_initial_done +
+                (variations_tasks * args.nodes_per_variation))
 
 
     transform_winrate = utils.winrate_transformer(config.stdev, args.verbosity)
@@ -224,7 +160,7 @@ if __name__ == '__main__':
 
                 if has_prev and (transdelta <= -variations_threshold or (move_num - 1) in comment_requests_variations):
                     if not (args.skip_white and prev_player == "white") and not (
-                                args.skip_black and prev_player == "black"):
+                            args.skip_black and prev_player == "black"):
                         needs_variations[move_num - 1] = (prev_stats, prev_move_list)
 
                         if (move_num - 1) not in comment_requests_variations:
@@ -248,9 +184,9 @@ if __name__ == '__main__':
                                          [], [])
 
                 if has_prev and ((move_num - 1) in comment_requests_analyze or (
-                            move_num - 1) in comment_requests_variations or transdelta <= -analyze_threshold):
+                        move_num - 1) in comment_requests_variations or transdelta <= -analyze_threshold):
                     if not (args.skip_white and prev_player == "white") and not (
-                                args.skip_black and prev_player == "black"):
+                            args.skip_black and prev_player == "black"):
                         (analysis_comment, lb_values, tr_values) = annotations.format_analysis(prev_stats,
                                                                                                prev_move_list,
                                                                                                this_move)
@@ -265,7 +201,7 @@ if __name__ == '__main__':
                 analyze_tasks_initial_done += 1
 
                 # save to file results with analyzing main line
-                sgf.save_to_file(sgf_fn_analyzed)
+                save_to_file(sgf_fn, sgf)
 
                 if args.win_graph and len(collected_winrates) > 0 and not skipped:
                     utils.graph_winrates(collected_winrates, sgf_fn)
@@ -317,7 +253,7 @@ if __name__ == '__main__':
             variations_tasks_done += 1
 
             # save to file results with analyzing variations
-            sgf.save_to_file(sgf_fn_analyzed)
+            save_to_file(sgf_fn, sgf)
 
             refresh_progress_bar()
     except:
@@ -329,7 +265,7 @@ if __name__ == '__main__':
     progress_bar.finish()
 
     # Save final results into file
-    sgf.save_to_file(sgf_fn_analyzed)
+    save_to_file(sgf_fn, sgf)
 
     time_stop = datetime.datetime.now()
 
