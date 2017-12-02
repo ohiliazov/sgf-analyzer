@@ -1,5 +1,4 @@
 import datetime
-import re
 import sys
 import time
 import traceback
@@ -8,10 +7,9 @@ import arguments
 import config
 import sgftools.utils as utils
 from analyzetools.analyze import do_analyze, do_variations
-from analyzetools.leelatools import add_moves_to_leela, calculate_tasks_left
-from analyzetools.preparation import prepare_sgf, get_initial_values
+from analyzetools.leelatools import add_moves_to_leela
+from analyzetools.preparation import prepare_sgf, get_initial_values, collect_requested_moves
 from sgftools import annotations, progressbar
-from sgftools import regex
 from sgftools.leela import Leela
 from sgftools.utils import save_to_file
 
@@ -30,47 +28,18 @@ if __name__ == '__main__':
     board_size, handicap_stone_count, is_handicap_game, is_japanese_rules, komi = get_initial_values(cursor)
 
     # First loop for comments parsing
-    move_num = -1
-    comment_requests_analyze = {}  # will contain move numbers that should be analyzed
-    comment_requests_variations = {}  # will contain move numbers that should be analyzed with variations
-    while not cursor.atEnd:
 
-        # Go to next node and increment move_num
-        cursor.next()
-        move_num += 1
-
-        node_comment = cursor.node.get('C')
-
-        # Store moves, requested for analysis and variations
-        if node_comment:
-            match = re.match(regex.comment_regex, node_comment.data[0])
-
-            if 'analyze' in match.group('node_comment'):
-                comment_requests_analyze[move_num] = True
-
-            if 'variations' in match.group('node_comment'):
-                comment_requests_analyze[move_num] = True
-                comment_requests_variations[move_num] = True
-
-            # Wipe comments is needed
-            if args.wipe_comments:
-                node_comment.data[0] = ""
-
-    # Calculate initial tasks
-    (analyze_tasks_initial, variations_tasks_initial) = calculate_tasks_left(sgf, comment_requests_analyze,
-                                                                             comment_requests_variations, args)
-
-    variations_tasks = variations_tasks_initial
-    analyze_tasks_initial_done = 0
+    analyze_request, variations_request, analyze_tasks, variations_tasks = collect_requested_moves(cursor, args)
+    analyze_tasks_done = 0
     variations_tasks_done = 0
 
 
     def approx_tasks_done():
-        return analyze_tasks_initial_done + (variations_tasks_done * args.nodes_per_variation)
+        return analyze_tasks_done + (variations_tasks_done * args.nodes_per_variation)
 
 
     def approx_tasks_max():
-        return analyze_tasks_initial + (variations_tasks * args.nodes_per_variation)
+        return analyze_tasks + (variations_tasks * args.nodes_per_variation)
 
 
     transform_winrate = utils.winrate_transformer(config.stdev, args.verbosity)
@@ -81,7 +50,7 @@ if __name__ == '__main__':
     variations_threshold = transform_winrate(0.5 + 0.5 * args.variations_threshold) - \
                            transform_winrate(0.5 - 0.5 * args.variations_threshold)
 
-    print("Executing approx %.0f analysis steps" % approx_tasks_max(), file=sys.stderr)
+    print("Executing approx %d analysis steps" % approx_tasks_max(), file=sys.stderr)
 
     progress_bar = progressbar.ProgressBar(max_value=approx_tasks_max())
     progress_bar.start()
@@ -122,10 +91,10 @@ if __name__ == '__main__':
             prev_player = "white" if current_player == "black" else "black"
 
             if ((args.analyze_start <= move_num <= args.analyze_end) or
-                    (move_num in comment_requests_analyze) or
-                    ((move_num - 1) in comment_requests_analyze) or
-                    (move_num in comment_requests_variations) or
-                    ((move_num - 1) in comment_requests_variations)):
+                    (move_num in analyze_request) or
+                    ((move_num - 1) in analyze_request) or
+                    (move_num in variations_request) or
+                    ((move_num - 1) in variations_request)):
 
                 stats, move_list, skipped = do_analyze(leela, base_dir, args.verbosity, args.analyze_time)
 
@@ -152,12 +121,12 @@ if __name__ == '__main__':
                                                                                          this_move, board_size)
                         annotations.annotate_sgf(cursor, delta_comment, delta_lb_values, [])
 
-                if has_prev and (transdelta <= -variations_threshold or (move_num - 1) in comment_requests_variations):
+                if has_prev and (transdelta <= -variations_threshold or (move_num - 1) in variations_request):
                     if not (args.skip_white and prev_player == "white") and not (
                             args.skip_black and prev_player == "black"):
                         needs_variations[move_num - 1] = (prev_stats, prev_move_list)
 
-                        if (move_num - 1) not in comment_requests_variations:
+                        if (move_num - 1) not in variations_request:
                             variations_tasks += 1
 
                 next_game_move = None
@@ -177,8 +146,8 @@ if __name__ == '__main__':
                                          annotations.format_winrate(stats, move_list, board_size, next_game_move),
                                          [], [])
 
-                if has_prev and ((move_num - 1) in comment_requests_analyze or (
-                        move_num - 1) in comment_requests_variations or transdelta <= -analyze_threshold):
+                if has_prev and ((move_num - 1) in analyze_request or (
+                        move_num - 1) in variations_request or transdelta <= -analyze_threshold):
                     if not (args.skip_white and prev_player == "white") and not (
                             args.skip_black and prev_player == "black"):
                         (analysis_comment, lb_values, tr_values) = annotations.format_analysis(prev_stats,
@@ -192,7 +161,7 @@ if __name__ == '__main__':
                 prev_stats = stats
                 prev_move_list = move_list
                 has_prev = True
-                analyze_tasks_initial_done += 1
+                analyze_tasks_done += 1
 
                 # save to file results with analyzing main line
                 save_to_file(sgf_fn, sgf)

@@ -13,8 +13,8 @@ skip_checkpoints = False
 path_to_log = './leela.log'
 
 # Set time for main line and variations analysis
-analyze_time = 10
-variations_time = 15
+analyze_time = 15
+variations_time = 5
 
 # Set desired threshold for displaying analysis and exploring suggested variations
 analyze_threshold = 0.05
