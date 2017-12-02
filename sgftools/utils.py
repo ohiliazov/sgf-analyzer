@@ -10,14 +10,6 @@ SGF_COORD = 'abcdefghijklmnopqrstuvwxy'
 BOARD_COORD = 'abcdefghjklmnopqrstuvwxyz'  # without "i"
 
 
-def write_to_file(filename, mode, content):
-    """
-    Writes SGF to file
-    """
-    with open(filename, mode, encoding='utf-8') as f:
-        f.write(str(content))
-
-
 def convert_position(board_size, pos):
     """
     Convert SGF coordinates to board position coordinates

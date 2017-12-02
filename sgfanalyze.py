@@ -66,10 +66,6 @@ if __name__ == '__main__':
     if board_size != 19:
         print("Warning: board size is not 19 so Leela could be much weaker and less accurate", file=sys.stderr)
 
-        if args.analyze_threshold == arguments.defaults['analyze_threshold'] \
-                or args.variations_threshold == arguments.defaults['variations_threshold']:
-            print("Warning: Consider also setting --analyze-thresh and --var-thresh higher", file=sys.stderr)
-
     # Set handicap stones count
     if node_handicap and int(node_handicap.data[0]) > 1:
         handicap_stone_count = int(node_handicap.data[0])
@@ -269,7 +265,7 @@ if __name__ == '__main__':
                 analyze_tasks_initial_done += 1
 
                 # save to file results with analyzing main line
-                utils.write_to_file(sgf_fn_analyzed, 'w', sgf)
+                sgf.save_to_file(sgf_fn_analyzed)
 
                 if args.win_graph and len(collected_winrates) > 0 and not skipped:
                     utils.graph_winrates(collected_winrates, sgf_fn)
@@ -321,7 +317,7 @@ if __name__ == '__main__':
             variations_tasks_done += 1
 
             # save to file results with analyzing variations
-            utils.write_to_file(sgf_fn_analyzed, 'w', sgf)
+            sgf.save_to_file(sgf_fn_analyzed)
 
             refresh_progress_bar()
     except:
@@ -333,7 +329,7 @@ if __name__ == '__main__':
     progress_bar.finish()
 
     # Save final results into file
-    utils.write_to_file(sgf_fn_analyzed, 'w', sgf)
+    sgf.save_to_file(sgf_fn_analyzed)
 
     time_stop = datetime.datetime.now()
 

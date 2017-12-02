@@ -51,7 +51,7 @@ class GameTreeEndError(Exception):
 # Constants
 INT_TYPE = type(0)
 STR_TYPE = type("")
-MAX_LINE_LEN = 76  # for line breaks
+MAX_LINE_LEN = 100  # for line breaks
 
 # text matching patterns
 reGameTreeStart = re.compile(r'\s*\(')
@@ -102,6 +102,10 @@ class Collection(List):
     def cursor(self, game_num=0):
         """ Returns a 'Cursor' object for navigation of the given 'GameTree'."""
         return Cursor(self[game_num])
+
+    def save_to_file(self, path_to_save):
+        with open(path_to_save, mode='w', encoding='utf-8') as f:
+            f.write(str(self))
 
 
 class Property(List):
