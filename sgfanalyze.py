@@ -4,7 +4,6 @@ import time
 import traceback
 
 import arguments
-import config
 import sgftools.utils as utils
 from analyzetools.analyze import do_analyze, do_variations
 from analyzetools.leelatools import add_moves_to_leela

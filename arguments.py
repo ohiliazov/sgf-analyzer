@@ -1,7 +1,6 @@
 import argparse
 import config
 
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument("path_to_sgf",
@@ -13,10 +12,10 @@ parser.add_argument('-v', '--verbosity',
                     help="Set the verbosity level, 0: progress only, 1: progress+status, 2: progress+status+state")
 
 parser.add_argument('--leela',
-                      default=config.path_to_leela,
-                      dest='path_to_leela',
-                      metavar="CMD",
-                      help="Command to run Leela executable")
+                    default=config.path_to_leela,
+                    dest='path_to_leela',
+                    metavar="CMD",
+                    help="Command to run Leela executable")
 
 parser.add_argument('--analyze-time',
                     dest='analyze_time',

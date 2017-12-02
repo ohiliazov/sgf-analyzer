@@ -523,26 +523,5 @@ class Dictionary(Mapping, MutableMixin):
         raise TypeError("Non-dictionaries cannot be converted to a dictionary.")
 
 
-def self_test_1():
-    l = List([1, 2, 3, 4])
-    d = Dictionary({"SZ": 19, "WP": "Oleksandr Hiliazov", "BP": "Anton Boreiko"})
-
-    l.append('a')
-    d["KM"] = 6.5
-    print(l, d)
-    print(l.data, d.data)
-
-    l.pop()
-    del d["SZ"]
-    print(l, d)
-    print(l.data, d.data)
-
-    l[3] = 'b'
-    d["KM"] = 0.5
-    print(l, d)
-    print(l.data, d.data)
-
-
 if __name__ == "__main__":
     print(__doc__)  # show module's documentation string
-    self_test_1()

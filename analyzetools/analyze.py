@@ -94,7 +94,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         stats, move_list, skipped = do_analyze(leela, base_dir, verbosity, args.variations_time)
         expand(node, stats, move_list)
 
-        for mv in node["history"]:
+        for _ in node["history"]:
             leela.pop_move()
 
     expand(tree, stats, move_list)

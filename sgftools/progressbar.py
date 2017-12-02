@@ -15,6 +15,8 @@ class ProgressBar(object):
         self.update_count = 0
         self.frequency = frequency
 
+        self.start_time = None
+
     def start(self):
         self.start_time = datetime.datetime.now()
         self.stream.write("\n")
@@ -93,6 +95,7 @@ class ProgressBar(object):
             "\r|%s| 100.00%% | Done. | Elapsed Time: %s                                             \n" % (
                 bar_str, time_remaining))
         time.sleep(0.5)
+
 
 def self_test_1():
     pb = ProgressBar(0, 100, 50, 1)
