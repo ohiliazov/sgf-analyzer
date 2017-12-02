@@ -5,7 +5,8 @@ import traceback
 
 import arguments
 import sgftools.utils as utils
-from analyzetools.analyze import do_analyze, do_variations
+from analyzetools.analyze import do_analyze
+from analyzetools.variations import do_variations
 from analyzetools.leelatools import add_moves_to_leela
 from analyzetools.preparation import prepare_sgf, get_initial_values, collect_requested_moves
 from sgftools import annotations, progressbar
