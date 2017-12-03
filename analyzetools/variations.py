@@ -18,7 +18,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
     def expand(node, stats, move_list):
         assert node["color"] in ['white', 'black']
 
-        def child_prob_raw(i, move):
+        def child_prob_raw(move):
             # possible for book moves
             if "is_book" in move:
                 return 1.0
@@ -27,14 +27,14 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
             else:
                 return (move["policy_prob"] + move["visits"]) / 2.0
 
-        def child_prob(i, move):
-            return child_prob_raw(i, move) / probsum
+        def child_prob(move):
+            return child_prob_raw(move) / probsum
 
         probsum = 0.0
-        for (i, move) in enumerate(move_list):
-            probsum += child_prob_raw(i, move)
+        for _, move in enumerate(move_list):
+            probsum += child_prob_raw(move)
 
-        for (i, move) in enumerate(move_list):
+        for _, move in enumerate(move_list):
             # Don't expand on the actual game line as a variation!
             if node["is_root"] and move["pos"] == game_move:
                 node["children"].append(None)
@@ -42,7 +42,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
             subhistory = node["history"][:]
             subhistory.append(move["pos"])
-            prob = node["prob"] * child_prob(i, move)
+            prob = node["prob"] * child_prob(move)
             clr = "white" if node["color"] == "black" else "black"
             child = {"children": [], "is_root": False, "history": subhistory, "explored": False, "prob": prob,
                      "stats": {}, "move_list": [], "color": clr}
@@ -53,9 +53,9 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         node["move_list"] = move_list
         node["explored"] = True
 
-        for i in range(len(leaves)):
-            if leaves[i] is node:
-                del leaves[i]
+        for leaf_idx in range(len(leaves)):
+            if leaves[leaf_idx] is node:
+                del leaves[leaf_idx]
                 break
 
     def search(node):
@@ -69,12 +69,10 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
     expand(tree, stats, move_list)
 
-    for i in range(args.nodes_per_variation):
+    for i in range(args.variations_depth):
         if len(leaves) > 0:
-            prob_sum = sum([leaf['prob'] for leaf in leaves])
             for leaf in leaves:
-                if leaf['prob'] / prob_sum > config.nodes_threshold:
-                    search(leaf)
+                search(leaf)
 
     def advance(cursor, color, mv):
         found_child_idx = None
@@ -125,7 +123,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
                     num_to_show = min(len(pv), max(1, len(pv) * 2 / 3 - 1))
 
                     if args.num_to_show is not None:
-                        num_to_show = args.num_to_show
+                        num_to_show = min(num_to_show, args.num_to_show)
 
                     for k in range(int(num_to_show)):
                         advance(cursor, color, pv[k])

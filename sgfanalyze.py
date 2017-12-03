@@ -35,11 +35,11 @@ if __name__ == '__main__':
 
 
     def approx_tasks_done():
-        return analyze_tasks_done + (variations_tasks_done * args.nodes_per_variation)
+        return analyze_tasks_done + (variations_tasks_done * args.variations_depth)
 
 
     def approx_tasks_max():
-        return analyze_tasks + (variations_tasks * args.nodes_per_variation)
+        return analyze_tasks + (variations_tasks * args.variations_depth)
 
 
     print("Executing approx %d analysis steps" % approx_tasks_max(), file=sys.stderr)

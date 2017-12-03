@@ -44,8 +44,8 @@ parser.add_argument('--var-thresh',
                          "win rate when the game is close")
 
 parser.add_argument('--nodes-per-var',
-                    dest='nodes_per_variation',
-                    default=config.nodes_per_variation,
+                    dest='variations_depth',
+                    default=config.variations_depth,
                     type=int,
                     help="How many nodes to explore with leela in each variation tree (default=8)")
 

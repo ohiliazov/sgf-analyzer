@@ -6,3 +6,4 @@ __pycache__
 test_sgf/*_analyzed.sgf
 test_sgf/*_graph.pdf
 leela.log
+config.py
