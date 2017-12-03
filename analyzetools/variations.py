@@ -6,7 +6,6 @@ import config
 # move_list is from a call to do_analyze
 # Iteratively expands a tree of moves by expanding on the leaf with the highest "probability of reaching".
 def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_dir, args):
-
     if 'bookmoves' in stats or len(move_list) <= 0:
         return None
 
@@ -18,7 +17,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
     def expand(node, stats, move_list):
         assert node["color"] in ['white', 'black']
 
-        def child_prob_raw(move):
+        def child_prob_raw(i, move):
             # possible for book moves
             if "is_book" in move:
                 return 1.0
@@ -27,14 +26,14 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
             else:
                 return (move["policy_prob"] + move["visits"]) / 2.0
 
-        def child_prob(move):
-            return child_prob_raw(move) / probsum
+        def child_prob(i, move):
+            return child_prob_raw(i, move) / probsum
 
         probsum = 0.0
-        for _, move in enumerate(move_list):
-            probsum += child_prob_raw(move)
+        for i, move in enumerate(move_list):
+            probsum += child_prob_raw(i, move)
 
-        for _, move in enumerate(move_list):
+        for i, move in enumerate(move_list):
             # Don't expand on the actual game line as a variation!
             if node["is_root"] and move["pos"] == game_move:
                 node["children"].append(None)
@@ -42,7 +41,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
             subhistory = node["history"][:]
             subhistory.append(move["pos"])
-            prob = node["prob"] * child_prob(move)
+            prob = node["prob"] * child_prob(i, move)
             clr = "white" if node["color"] == "black" else "black"
             child = {"children": [], "is_root": False, "history": subhistory, "explored": False, "prob": prob,
                      "stats": {}, "move_list": [], "color": clr}
@@ -62,6 +61,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         for mv in node["history"]:
             leela.add_move(leela.whose_turn(), mv)
         stats, move_list, skipped = do_analyze(leela, base_dir, args.verbosity, args.variations_time)
+
         expand(node, stats, move_list)
 
         for _ in node["history"]:

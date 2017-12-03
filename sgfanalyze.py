@@ -115,11 +115,11 @@ if __name__ == '__main__':
                         if (move_num - 1) not in variations_request:
                             variations_tasks += 1
 
-                            if args.show_winrate and 'winrate' in stats:
-                                progress_bar.set_message(f'winrate {(stats["winrate"]*100):.2f}% | '
-                                                         f'{current_player} '
-                                                         f'{convert_position(board_size, this_move):<3} | '
-                                                         f'delta {(delta*100):.2f}%')
+                if args.show_winrate and -delta > args.analyze_threshold:
+                    progress_bar.set_message(f'winrate {(stats["winrate"]*100):.2f}% | '
+                                             f'{current_player} '
+                                             f'{convert_position(board_size, this_move):<3} | '
+                                             f'delta {(delta*100):.2f}%')
 
                 next_game_move = None
 
@@ -180,12 +180,12 @@ if __name__ == '__main__':
         print("Exploring variations for %d moves with %d steps" % (variations_tasks, args.variations_depth),
               file=sys.stderr)
 
+        progress_bar = ProgressBar(max_value=variations_tasks)
+        progress_bar.start()
+
         move_num = -1
         cursor = sgf.cursor()
         leela.start()
-
-        progress_bar = ProgressBar(max_value=variations_tasks)
-        progress_bar.start()
         add_moves_to_leela(cursor, leela)
 
         while not cursor.atEnd:

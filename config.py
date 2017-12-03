@@ -9,8 +9,8 @@ verbosity = 0
 # Common config
 path_to_leela = './bots/leela/leela_0110_linux_x64_opencl'
 analyze_time = 30
-variations_time = 15
-variations_depth = 3
+variations_time = 7
+variations_depth = 2
 
 
 checkpoint_dir = './.leela_checkpoints'
@@ -21,7 +21,10 @@ path_to_log = './leela.log'
 analyze_threshold = 0.05
 variations_threshold = 0.075
 
-move_list_threshold = 0.05  # Default is 0.15 (experimental)
+# Display winrate in progress bar on moves with delta more than analyze_threshold
+show_winrate = True
+
+move_list_threshold = 0.2  # Default is 0.15 (experimental)
 num_to_show = 7
 
 # Set range of moves to analyze
@@ -31,5 +34,3 @@ analyze_end = float('inf')
 # For leela setting, review its docs
 leela_settings = ['--gtp', '--noponder']
 
-# Display winrate in progress bar on moves with delta more than variations_threshold
-show_winrate = True
