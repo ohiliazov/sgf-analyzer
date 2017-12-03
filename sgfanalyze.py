@@ -13,8 +13,6 @@ from sgftools import annotations, progressbar
 from sgftools.leela import Leela
 from sgftools.utils import save_to_file
 
-default_analyze_thresh = 0.010
-default_var_thresh = 0.010
 
 if __name__ == '__main__':
 
@@ -25,7 +23,13 @@ if __name__ == '__main__':
 
     # Set up SGF cursor and get values from first node
     cursor = sgf.cursor()
-    board_size, handicap_stone_count, is_handicap_game, is_japanese_rules, komi = get_initial_values(cursor)
+    game_settings = get_initial_values(cursor)
+
+    board_size = game_settings['board_size']
+    handicap_stone_count = game_settings['handicap_stone_count']
+    is_handicap_game = game_settings['is_handicap_game']
+    is_japanese_rules = game_settings['is_japanese_rules']
+    komi = game_settings['komi']
 
     # First loop for comments parsing
 

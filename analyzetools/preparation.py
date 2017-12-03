@@ -87,7 +87,15 @@ def get_initial_values(cursor):
             komi = 6.5 if is_japanese_rules else 7.5
         print("Warning: Komi not specified, assuming %.1f" % komi, file=sys.stderr)
 
-    return board_size, handicap_stone_count, is_handicap_game, is_japanese_rules, komi
+    game_settings = {
+        'board_size': board_size,
+        'handicap_stone_count': handicap_stone_count,
+        'is_handicap_game': is_handicap_game,
+        'is_japanese_rules': is_japanese_rules,
+        'komi': komi
+    }
+
+    return game_settings
 
 
 def collect_requested_moves(cursor, args):
