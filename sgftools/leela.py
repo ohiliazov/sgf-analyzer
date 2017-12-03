@@ -134,7 +134,7 @@ class Leela(object):
 
     def send_command(self, cmd, expected_success_count=1, drain=True):
         """
-        Send command to Ray and drains stdout/stderr
+        Send command to Leela and drains stdout/stderr
         :param cmd: string
         :param expected_success_count: how many '=' should Ray return
         :param drain: should drain or not
@@ -456,11 +456,14 @@ class Leela(object):
         stats, move_list = self.parse(stdout, stderr)
 
         if self.verbosity > 0:
-            print("Chosen move: %s" % utils.convert_position(self.board_size, stats['chosen']), file=sys.stderr)
-
+            chosen_move = utils.convert_position(self.board_size, stats['chosen'])
             if 'best' in stats:
-                print("Best move: %s" % utils.convert_position(self.board_size, stats['best']), file=sys.stderr)
-                print("Winrate: %.2f%%" % (stats['winrate'] * 100), file=sys.stderr)
-                print("Visits: %d" % stats['visits'], file=sys.stderr)
+                best_move = utils.convert_position(self.board_size, stats['best'])
+                winrate = (stats['winrate'] * 100)
+                visits = stats['visits']
+                print(f"Chosen move: {chosen_move:3} | Best move: {best_move:3} | "
+                      f"Winrate: {winrate:.2f}% | Visits: {visits}", file=sys.stderr)
+            else:
+                print(f"Chosen move: {chosen_move:3}", file=sys.stderr)
 
         return stats, move_list

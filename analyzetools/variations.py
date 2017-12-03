@@ -6,12 +6,12 @@ import config
 # move_list is from a call to do_analyze
 # Iteratively expands a tree of moves by expanding on the leaf with the highest "probability of reaching".
 def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_dir, args):
-    if 'bookmoves' in stats or len(move_list) <= 0:
-        return None
 
     rootcolor = leela.whose_turn()
     leaves = []
-    tree = {"children": [], "is_root": True, "history": [], "explored": False, "prob": 1.0, "stats": stats,
+    tree = {"children": [],         "is_root": True,
+            "history": [],          "explored": False,
+            "prob": 1.0,            "stats": stats,
             "move_list": move_list, "color": rootcolor}
 
     def expand(node, stats, move_list):
@@ -61,7 +61,6 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         for mv in node["history"]:
             leela.add_move(leela.whose_turn(), mv)
         stats, move_list, skipped = do_analyze(leela, base_dir, args.verbosity, args.variations_time)
-
         expand(node, stats, move_list)
 
         for _ in node["history"]:
@@ -71,8 +70,10 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
     for i in range(args.variations_depth):
         if len(leaves) > 0:
+            sum_prob = sum([leaf['prob'] for leaf in leaves])
             for leaf in leaves:
-                search(leaf)
+                if leaf['prob'] / sum_prob > config.move_list_threshold:
+                    search(leaf)
 
     def advance(cursor, color, mv):
         found_child_idx = None

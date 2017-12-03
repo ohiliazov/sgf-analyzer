@@ -5,6 +5,21 @@ import sys
 import config
 
 
+def retry_analysis(restarts):
+    def wrapper(fn):
+        def try_analysis(*args, **kwargs):
+            for i in range(restarts):
+                try:
+                    return fn(*args, **kwargs)
+                except Exception:
+                    if restarts < i:
+                        raise
+                    print("Error in leela, retrying analysis...", file=sys.stderr)
+        return try_analysis
+    return wrapper
+
+
+@retry_analysis(config.restarts)
 def do_analyze(leela, base_dir, verbosity, seconds_per_search):
     ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(seconds_per_search) + "sec"
     ckpt_fn = os.path.join(base_dir, ckpt_hash)
@@ -13,7 +28,7 @@ def do_analyze(leela, base_dir, verbosity, seconds_per_search):
 
     if os.path.exists(ckpt_fn) and not config.skip_checkpoints:
         skipped = True
-        if verbosity > 1:
+        if verbosity > 0:
             print("Loading checkpoint file: %s" % ckpt_fn, file=sys.stderr)
         with open(ckpt_fn, 'rb') as ckpt_file:
             stats, move_list = pickle.load(ckpt_file)

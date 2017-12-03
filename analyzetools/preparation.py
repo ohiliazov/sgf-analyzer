@@ -106,6 +106,7 @@ def collect_requested_moves(cursor, args):
             # Wipe comments is needed
             if args.wipe_comments:
                 node_comment.data[0] = ""
+
         analysis_mode = None
 
         if args.analyze_start <= move_num <= args.analyze_end:

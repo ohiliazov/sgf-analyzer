@@ -60,18 +60,19 @@ if __name__ == '__main__':
     needs_variations = {}
 
     try:
-        move_num = -1
+        progress_bar = ProgressBar(max_value=analyze_tasks)
+        print(f"Executing analysis for {analyze_tasks} moves", file=sys.stderr)
+
+        leela.start()
+        progress_bar.start()
+
         cursor = sgf.cursor()
+        add_moves_to_leela(cursor, leela)
+
+        move_num = -1
         prev_stats = {}
         prev_move_list = []
         has_prev = False
-
-        print("Executing analysis for %d moves" % analyze_tasks, file=sys.stderr)
-
-        leela.start()
-        progress_bar = ProgressBar(max_value=analyze_tasks)
-        progress_bar.start()
-        add_moves_to_leela(cursor, leela)
 
         # analyze main line, without variations
         while not cursor.atEnd:
@@ -158,10 +159,12 @@ if __name__ == '__main__':
                 # save to file results with analyzing main line
                 save_to_file(args.path_to_sgf, sgf)
 
-                if args.win_graph and len(collected_winrates) > 1 and not skipped:
-                    graph_winrates(collected_winrates, args.path_to_sgf)
+                if not skipped:
+                    progress_bar.update(analyze_tasks_done, analyze_tasks)
 
-                progress_bar.update(analyze_tasks_done, analyze_tasks)
+                    if args.win_graph and len(collected_winrates) > 1:
+                        graph_winrates(collected_winrates, args.path_to_sgf)
+
                 progress_bar.set_message(None)
 
             else:
@@ -191,12 +194,16 @@ if __name__ == '__main__':
         while not cursor.atEnd:
             cursor.next()
             move_num += 1
-            add_moves_to_leela(cursor, leela)
 
             if move_num not in needs_variations:
                 continue
 
             stats, move_list = needs_variations[move_num]
+
+            if 'bookmoves' in stats or len(move_list) <= 0:
+                continue
+
+            add_moves_to_leela(cursor, leela)
             next_game_move = None
 
             if not cursor.atEnd:
