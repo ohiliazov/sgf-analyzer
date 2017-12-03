@@ -47,9 +47,6 @@ if __name__ == '__main__':
     analyze_tasks_done = 0
     variations_tasks_done = 0
 
-    print("Executing approx %d analysis steps" % analyze_tasks, file=sys.stderr)
-
-
     leela = Leela(board_size=board_size,
                   executable=args.path_to_leela,
                   is_handicap_game=is_handicap_game,
@@ -68,6 +65,8 @@ if __name__ == '__main__':
         prev_stats = {}
         prev_move_list = []
         has_prev = False
+
+        print("Executing analysis for %d moves" % analyze_tasks, file=sys.stderr)
 
         leela.start()
         progress_bar = ProgressBar(max_value=analyze_tasks)
@@ -178,6 +177,9 @@ if __name__ == '__main__':
             graph_winrates(collected_winrates, args.path_to_sgf)
 
         # Now fill in variations for everything we need (suggested variations)
+        print("Exploring variations for %d moves with %d steps" % (variations_tasks, args.variations_depth),
+              file=sys.stderr)
+
         move_num = -1
         cursor = sgf.cursor()
         leela.start()
