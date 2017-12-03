@@ -24,7 +24,7 @@ class ProgressBar(object):
 
     def estimate_time(self, percent):
         if percent == 0:
-            return "Est..."
+            return "Est... "
 
         time_now = datetime.datetime.now()
         time_delta = time_now - self.start_time
@@ -71,7 +71,7 @@ class ProgressBar(object):
         time_remaining = self.estimate_time(percent)
 
         if self.update_count == 0:
-            self.stream.write("|%s| %6s%% | %s | %s / %s\n" % (bar_str, "done", "Est...", "done", "total"))
+            self.stream.write("|%s| %6s%% | %s | %s / %s\n" % (bar_str, "done", "Est... ", "done", "total"))
 
         if self.update_count % self.frequency == 0:
             if self.message is None:
@@ -92,7 +92,7 @@ class ProgressBar(object):
         bar_str = "=" * self.width
         time_remaining = self.elapsed_time()
         self.stream.write(
-            "\r|%s| 100.00%% | Done. | Elapsed Time: %s                                             \n" % (
+            "\r|%s| 100.00%% |  Done.  | Elapsed Time: %s                                             \n" % (
                 bar_str, time_remaining))
         time.sleep(0.5)
 

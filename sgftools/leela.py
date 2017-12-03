@@ -185,7 +185,7 @@ class Leela(object):
         time.sleep(2)
 
         if self.verbosity > 0:
-            print("Setting board size %d and komi %f to Leela" % (self.board_size, self.komi), file=sys.stderr)
+            print("Setting board size %d and komi %.1f to Leela" % (self.board_size, self.komi), file=sys.stderr)
 
         # Set board size, komi and time settings
         self.send_command('boardsize %d' % self.board_size)

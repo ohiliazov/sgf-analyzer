@@ -86,3 +86,9 @@ parser.add_argument('--skip-black',
                     dest='skip_black',
                     action='store_true',
                     help="Do not display analysis or explore variations for black mistakes")
+
+parser.add_argument('--winrate',
+                    dest='show_winrate',
+                    default=config.show_winrate,
+                    action='store_true',
+                    help="Display winrate in progress bar")
