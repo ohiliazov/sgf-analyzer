@@ -10,7 +10,7 @@ verbosity = 0
 path_to_leela = './bots/leela/leela_0110_linux_x64_opencl'
 analyze_time = 20
 variations_time = 10
-variations_depth = 10
+variations_depth = 7
 
 
 checkpoint_dir = './.leela_checkpoints'
@@ -33,5 +33,5 @@ analyze_end = float('inf')
 # For leela setting, review its docs
 leela_settings = ['--gtp', '--noponder']
 
-move_list_threshold = 0.2  # Default is 0.2 (experimental)
+move_list_threshold = 0.15  # Default is 0.2 (experimental)
 restarts = 5

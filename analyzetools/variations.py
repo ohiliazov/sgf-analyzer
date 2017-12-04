@@ -1,12 +1,10 @@
 from sgftools import annotations, sgflib
 from .analyze import do_analyze
-import config
 
 
 # move_list is from a call to do_analyze
 # Iteratively expands a tree of moves by expanding on the leaf with the highest "probability of reaching".
 def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_dir, args):
-
     rootcolor = leela.whose_turn()
     leaves = []
     tree = {"children": [],
@@ -48,12 +46,11 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
                 del leaves[leaf_idx]
                 break
 
-    def search(node):
+    def analyze_and_expand(node):
         for mv in node["history"]:
             leela.add_move(leela.whose_turn(), mv)
         stats, move_list, skipped = do_analyze(leela, base_dir, args.verbosity, args.variations_time)
         expand(node, stats, move_list)
-
         leela.pop_move(len(node['history']))
 
     expand(tree, stats, move_list)
@@ -61,7 +58,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
     for i in range(args.variations_depth):
         if len(leaves) > 0:
             for leaf in leaves:
-                    search(leaf)
+                    analyze_and_expand(leaf)
 
     def advance(cursor, color, mv):
         found_child_idx = None
@@ -109,10 +106,11 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
                 elif i == 0:
                     pv = node["move_list"][i]["pv"]
                     color = node["color"]
-                    num_to_show = min(len(pv), max(1, len(pv) * 2 / 3 - 1))
 
-                    if args.num_to_show is not None:
-                        num_to_show = min(num_to_show, args.num_to_show)
+                    if args.num_to_show:
+                        num_to_show = min(len(pv), args.num_to_show)
+                    else:
+                        num_to_show = len(pv)
 
                     for k in range(int(num_to_show)):
                         advance(cursor, color, pv[k])

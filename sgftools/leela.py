@@ -60,11 +60,7 @@ class Leela(object):
         return h.hexdigest()
 
     def add_move(self, color, pos):
-        """
-        Convert given SGF coordinates to board coordinates and writes them to history as a command to Leela
-        :param color: str
-        :param pos: str
-        """
+        """Convert given SGF coordinates to board coordinates and writes them to history as a command to Leela"""
         move = 'pass' if pos in ['', 'tt'] else utils.convert_position(self.board_size, pos)
         cmd = "play %s %s" % (color, move)
         self.history.append(cmd)
