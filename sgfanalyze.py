@@ -194,6 +194,7 @@ if __name__ == '__main__':
         while not cursor.atEnd:
             cursor.next()
             move_num += 1
+            add_moves_to_leela(cursor, leela)
 
             if move_num not in needs_variations:
                 continue
@@ -203,7 +204,6 @@ if __name__ == '__main__':
             if 'bookmoves' in stats or len(move_list) <= 0:
                 continue
 
-            add_moves_to_leela(cursor, leela)
             next_game_move = None
 
             if not cursor.atEnd:
@@ -227,6 +227,8 @@ if __name__ == '__main__':
 
         progress_bar.finish()
 
+    except KeyboardInterrupt:
+        pass
     except:
         traceback.print_exc()
         print("Failure, reporting partial results...", file=sys.stderr)
