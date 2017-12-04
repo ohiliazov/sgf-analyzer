@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 import time
 import traceback
@@ -13,18 +14,17 @@ from sgftools.leela import Leela
 from sgftools.utils import save_to_file, convert_position, graph_winrates
 from sgftools.progressbar import ProgressBar
 
-if __name__ == '__main__':
 
+def analyze_sgf(args, sgf_to_analyze):
     time_start = datetime.datetime.now()
 
-    args = arguments.parser.parse_args()
-
     if args.verbosity > 0:
-        print(f"Leela analysis started at {time_start.strftime('%H:%M:%S')}\n"
+        print(f"SGF: {sgf_to_analyze}\n"
+              f"Leela analysis started at {time_start.strftime('%H:%M:%S')}\n"
               f"Game moves analysis: {args.analyze_time:d} seconds per move\n"
               f"Variations analysis: {args.variations_time:d} seconds per move", file=sys.stderr)
 
-    sgf = parse_sgf(args.path_to_sgf)
+    sgf = parse_sgf(sgf_to_analyze)
     base_dir = prepare_checkpoint_dir(sgf)
 
     if args.verbosity > 1:
@@ -157,13 +157,13 @@ if __name__ == '__main__':
                 analyze_tasks_done += 1
 
                 # save to file results with analyzing main line
-                save_to_file(args.path_to_sgf, sgf)
+                save_to_file(sgf_to_analyze, sgf)
 
                 if not skipped:
                     progress_bar.update(analyze_tasks_done, analyze_tasks)
 
                     if args.win_graph and len(collected_winrates) > 1:
-                        graph_winrates(collected_winrates, args.path_to_sgf)
+                        graph_winrates(collected_winrates, sgf_to_analyze)
 
                 progress_bar.set_message(None)
 
@@ -177,7 +177,7 @@ if __name__ == '__main__':
         leela.clear_history()
 
         if args.win_graph:
-            graph_winrates(collected_winrates, args.path_to_sgf)
+            graph_winrates(collected_winrates, sgf_to_analyze)
 
         # Now fill in variations for everything we need (suggested variations)
         print("Exploring variations for %d moves with %d steps" % (variations_tasks, args.variations_depth),
@@ -221,22 +221,22 @@ if __name__ == '__main__':
             variations_tasks_done += 1
 
             # save to file results with analyzing variations
-            save_to_file(args.path_to_sgf, sgf)
+            save_to_file(sgf_to_analyze, sgf)
 
             progress_bar.update(variations_tasks_done, variations_tasks)
 
         progress_bar.finish()
 
     except KeyboardInterrupt:
-        pass
-    except:
+        raise KeyboardInterrupt
+    except not KeyboardInterrupt:
         traceback.print_exc()
         print("Failure, reporting partial results...", file=sys.stderr)
     finally:
         leela.stop()
 
     # Save final results into file
-    save_to_file(args.path_to_sgf, sgf)
+    save_to_file(sgf_to_analyze, sgf)
 
     time_stop = datetime.datetime.now()
 
@@ -246,3 +246,16 @@ if __name__ == '__main__':
 
     # delay in case of sequential running of several analysis
     time.sleep(1)
+
+
+if __name__ == '__main__':
+    args = arguments.parser.parse_args()
+
+    if os.path.isdir(args.path_to_sgf):
+        games_to_analyze = [os.path.join(args.path_to_sgf, file) for file in os.listdir(args.path_to_sgf)
+                            if file.endswith('.sgf') and not file.endswith('_analyzed.sgf')]
+    else:
+        games_to_analyze = [args.path_to_sgf]
+
+    for game in games_to_analyze:
+        analyze_sgf(args, game)

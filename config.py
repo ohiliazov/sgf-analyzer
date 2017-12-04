@@ -10,7 +10,7 @@ verbosity = 0
 path_to_leela = './bots/leela/leela_0110_linux_x64_opencl'
 analyze_time = 20
 variations_time = 10
-variations_depth = 7
+variations_depth = 5
 
 
 checkpoint_dir = './.leela_checkpoints'
@@ -19,7 +19,7 @@ path_to_log = './leela.log'
 
 # Set time
 analyze_threshold = 0.05
-variations_threshold = 0.075
+variations_threshold = 0.1
 
 # Display winrate in progress bar on moves with delta more than analyze_threshold
 show_winrate = True
