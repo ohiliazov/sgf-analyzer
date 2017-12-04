@@ -33,5 +33,5 @@ analyze_end = float('inf')
 # For leela setting, review its docs
 leela_settings = ['--gtp', '--noponder']
 
-move_list_threshold = 0.1  # Default is 0.15 (experimental)
+move_list_threshold = 0.2  # Default is 0.2 (experimental)
 restarts = 5

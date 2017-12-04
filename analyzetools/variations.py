@@ -9,31 +9,18 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
     rootcolor = leela.whose_turn()
     leaves = []
-    tree = {"children": [],         "is_root": True,
-            "history": [],          "explored": False,
-            "prob": 1.0,            "stats": stats,
-            "move_list": move_list, "color": rootcolor}
+    tree = {"children": [],
+            "is_root": True,
+            "history": [],
+            "explored": False,
+            "stats": stats,
+            "move_list": move_list,
+            "color": rootcolor}
 
     def expand(node, stats, move_list):
         assert node["color"] in ['white', 'black']
 
-        def child_prob_raw(i, move):
-            # possible for book moves
-            if "is_book" in move:
-                return 1.0
-            elif node["color"] == rootcolor:
-                return move["visits"] ** 1.0
-            else:
-                return (move["policy_prob"] + move["visits"]) / 2.0
-
-        def child_prob(i, move):
-            return child_prob_raw(i, move) / probsum
-
-        probsum = 0.0
-        for i, move in enumerate(move_list):
-            probsum += child_prob_raw(i, move)
-
-        for i, move in enumerate(move_list):
+        for move in move_list:
             # Don't expand on the actual game line as a variation!
             if node["is_root"] and move["pos"] == game_move:
                 node["children"].append(None)
@@ -41,10 +28,14 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
 
             subhistory = node["history"][:]
             subhistory.append(move["pos"])
-            prob = node["prob"] * child_prob(i, move)
             clr = "white" if node["color"] == "black" else "black"
-            child = {"children": [], "is_root": False, "history": subhistory, "explored": False, "prob": prob,
-                     "stats": {}, "move_list": [], "color": clr}
+            child = {"children": [],
+                     "is_root": False,
+                     "history": subhistory,
+                     "explored": False,
+                     "stats": {},
+                     "move_list": [],
+                     "color": clr}
             node["children"].append(child)
             leaves.append(child)
 
@@ -63,16 +54,13 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         stats, move_list, skipped = do_analyze(leela, base_dir, args.verbosity, args.variations_time)
         expand(node, stats, move_list)
 
-        for _ in node["history"]:
-            leela.pop_move()
+        leela.pop_move(len(node['history']))
 
     expand(tree, stats, move_list)
 
     for i in range(args.variations_depth):
         if len(leaves) > 0:
-            sum_prob = sum([leaf['prob'] for leaf in leaves])
             for leaf in leaves:
-                if leaf['prob'] / sum_prob > config.move_list_threshold:
                     search(leaf)
 
     def advance(cursor, color, mv):

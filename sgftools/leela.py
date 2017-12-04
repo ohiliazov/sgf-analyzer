@@ -69,8 +69,9 @@ class Leela(object):
         cmd = "play %s %s" % (color, move)
         self.history.append(cmd)
 
-    def pop_move(self):
-        self.history.pop()
+    def pop_move(self, cnt=1):
+        for i in range(cnt):
+            self.history.pop()
 
     def clear_history(self):
         self.history.clear()
