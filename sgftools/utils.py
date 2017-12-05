@@ -18,6 +18,9 @@ def convert_position(board_size, pos):
     Convert SGF coordinates to board position coordinates
     Example aa -> A1, qq -> P15
     """
+    if pos == "" or (pos == "tt" and board_size <= 19):
+        return "pass"
+
     x = BOARD_COORD[SGF_COORD.index(pos[0])].upper()
     y = board_size - SGF_COORD.index(pos[1])
 
@@ -28,7 +31,6 @@ def parse_position(board_size, pos):
     """
     Convert board position coordinates to SGF coordinates
     Example A1 -> aa, P15 -> qq
-    :return: string
     """
     # Pass moves are the empty string in sgf files
     if pos == "pass":
@@ -43,7 +45,6 @@ def parse_position(board_size, pos):
 def graph_winrates(winrates, sgf_fn):
     x = []
     y = []
-
     for move_num in sorted(winrates.keys()):
         pl, wr = winrates[move_num]
 

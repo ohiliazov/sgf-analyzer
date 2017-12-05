@@ -5,7 +5,7 @@ import time
 import traceback
 
 import arguments
-from analyzetools.analyze import do_analyze
+from analyzetools.analyze import do_analyze, next_move_pos
 from analyzetools.variations import do_variations
 from analyzetools.leelatools import add_moves_to_leela
 from analyzetools.preparation import parse_sgf, prepare_checkpoint_dir, get_initial_values, collect_requested_moves
@@ -43,7 +43,10 @@ def analyze_sgf(args, sgf_to_analyze):
 
     # First loop for comments parsing
 
-    analyze_request, variations_request, analyze_tasks, variations_tasks = collect_requested_moves(cursor, args)
+    analyze_request, variations_request = collect_requested_moves(cursor, args)
+
+    analyze_tasks = len(analyze_request)
+    variations_tasks = len(variations_request)
     analyze_tasks_done = 0
     variations_tasks_done = 0
 
@@ -58,6 +61,8 @@ def analyze_sgf(args, sgf_to_analyze):
     collected_best_moves = {}
     collected_best_move_winrates = {}
     needs_variations = {}
+    collected_stats = {}
+    collected_move_lists = {}
 
     try:
         progress_bar = ProgressBar(max_value=analyze_tasks)
@@ -82,15 +87,14 @@ def analyze_sgf(args, sgf_to_analyze):
             current_player = leela.whose_turn()
             prev_player = "white" if current_player == "black" else "black"
 
-            if ((args.analyze_start <= move_num <= args.analyze_end) or
-                    (move_num in analyze_request) or
-                    ((move_num - 1) in analyze_request) or
-                    (move_num in variations_request) or
-                    ((move_num - 1) in variations_request)):
-
+            if (move_num in analyze_request) or (move_num in variations_request):
                 stats, move_list, skipped = do_analyze(leela, base_dir, args.verbosity, args.analyze_time)
 
-                if 'winrate' in stats and stats['visits'] > 100:
+                # Here we store ALL statistics
+                collected_stats[move_num] = stats
+                collected_move_lists[move_num] = move_list
+
+                if 'winrate' in stats:
                     collected_winrates[move_num] = (current_player, stats['winrate'])
 
                 if len(move_list) > 0 and 'winrate' in move_list[0]:
@@ -122,7 +126,7 @@ def analyze_sgf(args, sgf_to_analyze):
                                              f'{convert_position(board_size, this_move):<3} | '
                                              f'delta {(delta*100):.2f}%')
 
-                next_game_move = None
+                next_game_move = next_move_pos(cursor)
 
                 if not cursor.atEnd:
                     cursor.next()
@@ -227,16 +231,11 @@ def analyze_sgf(args, sgf_to_analyze):
 
         progress_bar.finish()
 
-    except KeyboardInterrupt:
-        raise KeyboardInterrupt
-    except not KeyboardInterrupt:
+    except:
         traceback.print_exc()
         print("Failure, reporting partial results...", file=sys.stderr)
     finally:
         leela.stop()
-
-    # Save final results into file
-    save_to_file(sgf_to_analyze, sgf)
 
     time_stop = datetime.datetime.now()
 

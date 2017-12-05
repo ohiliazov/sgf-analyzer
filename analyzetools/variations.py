@@ -1,10 +1,17 @@
 from sgftools import annotations, sgflib
 from .analyze import do_analyze
+import config
+
+
+def filter_move_list(move_list):
+    visit_sums = sum([move['visits'] for move in move_list])
+    return [move for move in move_list if move['visits'] / visit_sums > config.move_list_threshold]
 
 
 # move_list is from a call to do_analyze
 # Iteratively expands a tree of moves by expanding on the leaf with the highest "probability of reaching".
 def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_dir, args):
+    move_list = filter_move_list(move_list)
     rootcolor = leela.whose_turn()
     leaves = []
     tree = {"children": [],

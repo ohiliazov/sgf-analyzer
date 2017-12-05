@@ -1,6 +1,7 @@
 import os
 import pickle
 import sys
+import traceback
 
 import config
 
@@ -8,10 +9,13 @@ import config
 def retry_analysis(restarts):
     def wrapper(fn):
         def try_analysis(*args, **kwargs):
+            if not isinstance(restarts, int) or not restarts:
+                return fn(*args, **kwargs)
             for i in range(restarts):
                 try:
                     return fn(*args, **kwargs)
                 except Exception:
+                    traceback.print_exc()
                     if restarts < i:
                         raise
                     print("Error in leela, retrying analysis...", file=sys.stderr)
@@ -43,3 +47,17 @@ def do_analyze(leela, base_dir, verbosity, seconds_per_search):
             ckpt_file.close()
 
     return stats, move_list, skipped
+
+
+def next_move_pos(cursor):
+    mv = None
+
+    if not cursor.atEnd:
+        cursor.next()
+        if 'W' in cursor.node.keys():
+            mv = cursor.node['W'].data[0]
+        if 'B' in cursor.node.keys():
+            mv = cursor.node['B'].data[0]
+        cursor.previous()
+
+    return mv

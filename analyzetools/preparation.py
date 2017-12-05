@@ -78,51 +78,32 @@ def get_initial_values(cursor):
 
 
 def collect_requested_moves(cursor, args):
-    comment_requests_analyze = {}
-    comment_requests_variations = {}
-    analyze_tasks_initial = 0
-    variations_tasks_initial = 0
-    move_num = -1
+    moves_to_analyze = {}
+    moves_to_variations = {}
 
+    move_num = -1
     while not cursor.atEnd:
 
-        # Go to next node and increment move_num
         cursor.next()
         move_num += 1
 
         node_comment = cursor.node.get('C')
-
-        # Store moves, requested for analysis and variations
         if node_comment:
             match = re.match(comment_regex, node_comment.data[0])
 
-            if 'analyze' in match.group('node_comment'):
-                comment_requests_analyze[move_num] = True
+            if match:
+                if 'variations' in match.group('node_comment'):
+                    moves_to_variations[move_num] = True
+                    moves_to_analyze[move_num] = True
+                    moves_to_analyze[move_num + 1] = True
+                elif 'analyze' in match.group('node_comment'):
+                    moves_to_analyze[move_num] = True
+                    moves_to_analyze[move_num + 1] = True
 
-            if 'variations' in match.group('node_comment'):
-                comment_requests_analyze[move_num] = True
-                comment_requests_variations[move_num] = True
-
-            # Wipe comments is needed
             if args.wipe_comments:
                 node_comment.data[0] = ""
 
-        analysis_mode = None
+        if args.analyze_start < move_num < args.analyze_end:
+            moves_to_analyze[move_num] = True
 
-        if args.analyze_start <= move_num <= args.analyze_end:
-            analysis_mode = 'analyze'
-
-        if move_num in comment_requests_analyze or (move_num - 1) in comment_requests_analyze or (
-                move_num - 1) in comment_requests_variations:
-            analysis_mode = 'analyze'
-
-        if move_num in comment_requests_variations:
-            analysis_mode = 'variations'
-
-        if analysis_mode == 'analyze':
-            analyze_tasks_initial += 1
-        elif analysis_mode == 'variations':
-            analyze_tasks_initial += 1
-            variations_tasks_initial += 1
-
-    return comment_requests_analyze, comment_requests_variations, analyze_tasks_initial, variations_tasks_initial
+    return moves_to_analyze, moves_to_variations
