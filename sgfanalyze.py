@@ -15,6 +15,14 @@ from sgftools.utils import save_to_file, convert_position, graph_winrates
 from sgftools.progressbar import ProgressBar
 
 
+class PlayedTwiceError(Exception):
+    pass
+
+
+def is_skipped(args, player_color):
+    return (args.skip_white and player_color == "white") and not (args.skip_black and player_color == "black")
+
+
 def analyze_sgf(args, sgf_to_analyze):
     time_start = datetime.datetime.now()
 
@@ -43,10 +51,10 @@ def analyze_sgf(args, sgf_to_analyze):
 
     # First loop for comments parsing
 
-    analyze_request, variations_request = collect_requested_moves(cursor, args)
+    moves_to_analyze, moves_to_variations = collect_requested_moves(cursor, args)
 
-    analyze_tasks = len(analyze_request)
-    variations_tasks = len(variations_request)
+    analyze_tasks = len(moves_to_analyze)
+    variations_tasks = len(moves_to_variations)
     analyze_tasks_done = 0
     variations_tasks_done = 0
 
@@ -57,12 +65,9 @@ def analyze_sgf(args, sgf_to_analyze):
                   seconds_per_search=args.analyze_time,
                   verbosity=args.verbosity)
 
-    collected_winrates = {}
-    collected_best_moves = {}
-    collected_best_move_winrates = {}
-    needs_variations = {}
     collected_stats = {}
     collected_move_lists = {}
+    best_moves = {}
 
     try:
         progress_bar = ProgressBar(max_value=analyze_tasks)
@@ -78,47 +83,44 @@ def analyze_sgf(args, sgf_to_analyze):
         prev_stats = {}
         prev_move_list = []
         has_prev = False
+        previous_player = None
 
         # analyze main line, without variations
         while not cursor.atEnd:
             cursor.next()
             move_num += 1
             this_move = add_moves_to_leela(cursor, leela)
-            current_player = leela.whose_turn()
-            prev_player = "white" if current_player == "black" else "black"
 
-            if (move_num in analyze_request) or (move_num in variations_request):
+            current_player = 'black' if 'W' in cursor.node.data else 'white'
+
+            if previous_player == current_player:
+                raise PlayedTwiceError
+
+            if move_num in moves_to_analyze:
                 stats, move_list, skipped = do_analyze(leela, base_dir, args.verbosity, args.analyze_time)
 
                 # Here we store ALL statistics
                 collected_stats[move_num] = stats
                 collected_move_lists[move_num] = move_list
 
-                if 'winrate' in stats:
-                    collected_winrates[move_num] = (current_player, stats['winrate'])
-
-                if len(move_list) > 0 and 'winrate' in move_list[0]:
-                    collected_best_moves[move_num] = move_list[0]['pos']
-                    collected_best_move_winrates[move_num] = move_list[0]['winrate']
+                if move_list and 'winrate' in move_list[0]:
+                    best_moves[move_num] = move_list[0]
 
                 delta = 0.0
 
-                if 'winrate' in stats and (move_num - 1) in collected_best_moves:
-                    if this_move != collected_best_moves[move_num - 1]:
-                        delta = stats['winrate'] - collected_best_move_winrates[move_num - 1]
+                if 'winrate' in stats and (move_num - 1) in best_moves:
+                    if this_move != best_moves[move_num - 1]['pos']:
+                        delta = stats['winrate'] - best_moves[move_num - 1]['winrate']
                         delta = min(0.0, (-delta if leela.whose_turn() == "black" else delta))
 
                     if delta <= -args.analyze_threshold:
                         (delta_comment, delta_lb_values) = annotations.format_delta_info(delta, this_move, board_size)
                         annotations.annotate_sgf(cursor, delta_comment, delta_lb_values, [])
 
-                if has_prev and (delta <= -args.variations_threshold or (move_num - 1) in variations_request):
-                    if not (args.skip_white and prev_player == "white") and not (
-                            args.skip_black and prev_player == "black"):
-                        needs_variations[move_num - 1] = (prev_stats, prev_move_list)
-
-                        if (move_num - 1) not in variations_request:
-                            variations_tasks += 1
+                if has_prev and delta <= -args.variations_threshold and not is_skipped(args, previous_player):
+                    if (move_num - 1) not in moves_to_variations:
+                        variations_tasks += 1
+                    moves_to_variations[move_num - 1] = True
 
                 if args.show_winrate and -delta > args.analyze_threshold:
                     progress_bar.set_message(f'winrate {(stats["winrate"]*100):.2f}% | '
@@ -128,25 +130,14 @@ def analyze_sgf(args, sgf_to_analyze):
 
                 next_game_move = next_move_pos(cursor)
 
-                if not cursor.atEnd:
-                    cursor.next()
-
-                    if 'W' in cursor.node.keys():
-                        next_game_move = cursor.node['W'].data[0]
-
-                    if 'B' in cursor.node.keys():
-                        next_game_move = cursor.node['B'].data[0]
-
-                    cursor.previous()
-
                 annotations.annotate_sgf(cursor,
                                          annotations.format_winrate(stats, move_list, board_size, next_game_move),
                                          [], [])
 
-                if has_prev and ((move_num - 1) in analyze_request or (
-                        move_num - 1) in variations_request or delta <= -args.analyze_threshold):
-                    if not (args.skip_white and prev_player == "white") and not (
-                            args.skip_black and prev_player == "black"):
+                if has_prev and ((move_num - 1) in moves_to_analyze or (
+                        move_num - 1) in moves_to_variations or delta <= -args.analyze_threshold):
+                    if not (args.skip_white and previous_player == "white") and not (
+                            args.skip_black and previous_player == "black"):
                         (analysis_comment, lb_values, tr_values) = annotations.format_analysis(prev_stats,
                                                                                                prev_move_list,
                                                                                                this_move)
@@ -166,8 +157,8 @@ def analyze_sgf(args, sgf_to_analyze):
                 if not skipped:
                     progress_bar.update(analyze_tasks_done, analyze_tasks)
 
-                    if args.win_graph and len(collected_winrates) > 1:
-                        graph_winrates(collected_winrates, sgf_to_analyze)
+                    if args.win_graph and len(collected_stats) > 1:
+                        graph_winrates(collected_stats, sgf_to_analyze)
 
                 progress_bar.set_message(None)
 
@@ -176,12 +167,14 @@ def analyze_sgf(args, sgf_to_analyze):
                 prev_move_list = []
                 has_prev = False
 
+            previous_player = current_player
+
         progress_bar.finish()
         leela.stop()
         leela.clear_history()
 
         if args.win_graph:
-            graph_winrates(collected_winrates, sgf_to_analyze)
+            graph_winrates(collected_stats, sgf_to_analyze)
 
         # Now fill in variations for everything we need (suggested variations)
         print("Exploring variations for %d moves with %d steps" % (variations_tasks, args.variations_depth),
@@ -200,33 +193,20 @@ def analyze_sgf(args, sgf_to_analyze):
             move_num += 1
             add_moves_to_leela(cursor, leela)
 
-            if move_num not in needs_variations:
+            if move_num not in moves_to_variations:
                 continue
 
-            stats, move_list = needs_variations[move_num]
+            stats, move_list = collected_stats[move_num], collected_move_lists[move_num]
 
             if 'bookmoves' in stats or len(move_list) <= 0:
                 continue
 
-            next_game_move = None
-
-            if not cursor.atEnd:
-                cursor.next()
-
-                if 'W' in cursor.node.keys():
-                    next_game_move = cursor.node['W'].data[0]
-
-                if 'B' in cursor.node.keys():
-                    next_game_move = cursor.node['B'].data[0]
-
-                cursor.previous()
+            next_game_move = next_move_pos(cursor)
 
             do_variations(cursor, leela, stats, move_list, board_size, next_game_move, base_dir, args)
             variations_tasks_done += 1
 
-            # save to file results with analyzing variations
             save_to_file(sgf_to_analyze, sgf)
-
             progress_bar.update(variations_tasks_done, variations_tasks)
 
         progress_bar.finish()

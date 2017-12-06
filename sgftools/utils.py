@@ -46,10 +46,10 @@ def graph_winrates(winrates, sgf_fn):
     x = []
     y = []
     for move_num in sorted(winrates.keys()):
-        pl, wr = winrates[move_num]
-
+        if 'winrate' not in winrates[move_num]:
+            continue
         x.append(move_num)
-        y.append(wr)
+        y.append(winrates[move_num]['winrate'])
 
     plt.figure(1)
 
