@@ -1,4 +1,4 @@
-from sgftools.sgflib import Property, Node
+from sgflib import Property, Node
 
 
 def insert_sequence(cursor, seq, data=None, callback=None):

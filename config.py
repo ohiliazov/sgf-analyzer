@@ -7,7 +7,7 @@ Please rename/copy this file to 'config.py', if you don't have one.
 verbosity = 0
 
 # Common config
-path_to_leela = './bots/leela/leela_0110_linux_x64_opencl'
+path_to_leela = './bots/leela/leela_0110_linux_x64'
 analyze_time = 20
 variations_time = 10
 variations_depth = 5

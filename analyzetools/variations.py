@@ -1,4 +1,5 @@
-from sgftools import annotations, sgflib
+from sgftools import annotations
+from sgflib import Node, Property
 from .analyze import do_analyze
 import config
 
@@ -78,8 +79,8 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         if found_child_idx is not None:
             cursor.next(found_child_idx)
         else:
-            nnode = sgflib.Node()
-            nnode.add_property(sgflib.Property(clr, [mv]))
+            nnode = Node()
+            nnode.add_property(Property(clr, [mv]))
             cursor.append_node(nnode)
             cursor.next(len(cursor.children) - 1)
 

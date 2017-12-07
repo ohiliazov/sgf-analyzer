@@ -4,7 +4,7 @@ import re
 import sys
 
 import config
-from sgftools.sgflib import SGFParser
+from sgflib import SGFParser
 
 comment_regex = r"(?P<nickname>[\w\W]+)+: (?P<node_comment>[\w\W]+)+"
 

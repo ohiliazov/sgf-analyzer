@@ -1,6 +1,6 @@
 import re
 
-from sgftools.typelib import List, Dictionary
+from .typelib import List, Dictionary
 
 
 # Parsing Exceptions
