@@ -28,7 +28,29 @@ liberties, it should be removed (suicide) and the prisoner count increased accor
 Properties
 
 TW and TB points must be unique, i.e. it's illegal to list the same point in TB and TW within the same node.
+
+Property types:
+
+  UcLetter   = "A".."Z"
+  Digit      = "0".."9"
+  None       = ""
+
+  Number     = [("+"|"-")] Digit { Digit }
+  Real       = Number ["." Digit { Digit }]
+
+  Double     = ("1" | "2")
+  Color      = ("B" | "W")
+
+  SimpleText = { any character (handling see below) }
+  Text       = { any character (handling see below) }
+
+  Point      = game-specific
+  Move       = game-specific
+  Stone      = game-specific
+
+  Compose    = ValueType ":" ValueType
 """
+from sgflib import Property
 
 
 # EXCEPTIONS
@@ -36,7 +58,7 @@ class UnexpectedPropertyException(Exception):
     pass
 
 
-class BaseProperty(object):
+class BaseProperty(Property):
     def define_property(self, label):
         raise NotImplementedError()
 
@@ -97,10 +119,6 @@ already there, is bad style. Applications may want to delete these values and is
 """
 
 
-class SetupProperty:
-    pass
-
-
 class BlackStones:
     label = 'AB'
     info = ("Add black stones to the board. This can be used to set up positions or problems. Adding is done by "
@@ -122,6 +140,26 @@ class WhiteStones:
             "'overwriting' the given point with black stones. It doesn't matter what was there before. Adding a stone "
             "doesn't make any prisoners nor any other captures (e.g. suicide). Thus it's possible to create illegal "
             "board positions.\nPoints used in stone type must be unique.")
+
+
+class WhoseTurn:
+    label = 'PL'
+    info = "PL tells whose turn it is to play. This can be used when setting up positions or problems."
+
+
+# NODE ANNOTATION PROPERTIES
+class SetupProperty(BaseProperty):
+    def define_property(self, label):
+        if label == 'AB':
+            return BlackStones()
+        elif label == 'AE':
+            return EmptyPoints()
+        elif label == 'AW':
+            return WhiteStones()
+        elif label == 'PL':
+            return WhoseTurn()
+        else:
+            raise UnexpectedPropertyException()
 
 
 # Game specific properties (GO)
