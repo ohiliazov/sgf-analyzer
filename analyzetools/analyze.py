@@ -39,9 +39,9 @@ def do_analyze(leela, base_dir, verbosity, seconds_per_search):
             ckpt_file.close()
     else:
         skipped = False
-        leela.reset()
+        leela.clear_board()
         leela.go_to_position()
-        stats, move_list = leela.analyze(seconds_per_search)
+        stats, move_list = leela.analyze()
         with open(ckpt_fn, 'wb') as ckpt_file:
             pickle.dump((stats, move_list), ckpt_file)
             ckpt_file.close()

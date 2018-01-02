@@ -5,6 +5,7 @@ import time
 import traceback
 
 import arguments
+import config
 from analyzetools.analyze import do_analyze, next_move_pos
 from analyzetools.variations import do_variations
 from analyzetools.leelatools import add_moves_to_leela
@@ -43,7 +44,7 @@ def analyze_sgf(args, sgf_to_analyze):
     game_settings = get_initial_values(cursor)
 
     board_size = game_settings['board_size']
-    is_handicap_game = game_settings['is_handicap_game']
+    handicap_stones = game_settings['handicap_stones']
     komi = game_settings['komi']
 
     if board_size != 19:
@@ -59,11 +60,10 @@ def analyze_sgf(args, sgf_to_analyze):
     variations_tasks_done = 0
 
     leela = Leela(board_size=board_size,
-                  executable=args.path_to_leela,
-                  is_handicap_game=is_handicap_game,
+                  path_to_exec=args.path_to_leela,
+                  handicap_stones=handicap_stones,
                   komi=komi,
-                  seconds_per_search=args.analyze_time,
-                  verbosity=args.verbosity)
+                  seconds_per_search=args.analyze_time)
 
     collected_stats = {}
     collected_move_lists = {}
@@ -113,7 +113,7 @@ def analyze_sgf(args, sgf_to_analyze):
                         delta = stats['winrate'] - best_moves[move_num - 1]['winrate']
                         delta = min(0.0, (-delta if leela.whose_turn() == "black" else delta))
 
-                    if delta <= -args.analyze_threshold:
+                    if -delta > args.analyze_threshold:
                         (delta_comment, delta_lb_values) = annotations.format_delta_info(delta, this_move, board_size)
                         annotations.annotate_sgf(cursor, delta_comment, delta_lb_values, [])
 
@@ -134,13 +134,18 @@ def analyze_sgf(args, sgf_to_analyze):
                                          annotations.format_winrate(stats, move_list, board_size, next_game_move),
                                          [], [])
 
-                if has_prev and ((move_num - 1) in moves_to_analyze or (
-                        move_num - 1) in moves_to_variations or delta <= -args.analyze_threshold):
+                if has_prev and ((move_num - 1) in moves_to_analyze and -delta > args.analyze_threshold or (
+                        move_num - 1) in moves_to_variations):
                     if not (args.skip_white and previous_player == "white") and not (
                             args.skip_black and previous_player == "black"):
-                        (analysis_comment, lb_values, tr_values) = annotations.format_analysis(prev_stats,
-                                                                                               prev_move_list,
-                                                                                               this_move, board_size)
+
+                        def filter_move_list(move_list):
+                            visit_sums = sum([move['visits'] for move in move_list])
+                            return [move for move in move_list if
+                                    move['visits'] / visit_sums > config.move_list_threshold]
+
+                        (analysis_comment, lb_values, tr_values) = annotations.format_analysis(
+                            prev_stats, filter_move_list(prev_move_list), this_move, board_size)
                         cursor.previous()
                         # adding comment to sgf with suggested alternative variations
                         annotations.annotate_sgf(cursor, analysis_comment, lb_values, tr_values)

@@ -70,7 +70,7 @@ def get_initial_values(cursor):
 
     game_settings = {
         'board_size': board_size,
-        'is_handicap_game': bool(handicap_stone_count),
+        'handicap_stones': handicap_stone_count,
         'komi': komi
     }
 

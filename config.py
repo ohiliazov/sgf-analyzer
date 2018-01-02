@@ -8,8 +8,8 @@ verbosity = 0
 
 # Common config
 path_to_leela = './bots/leela/leela_0110_linux_x64'
-analyze_time = 20
-variations_time = 10
+analyze_time = 5
+variations_time = 5
 variations_depth = 5
 
 
