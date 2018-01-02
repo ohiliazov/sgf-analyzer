@@ -4,7 +4,7 @@ import time
 
 
 class ProgressBar(object):
-    def __init__(self, min_value=0, max_value=100, width=50, frequency=1, stream=sys.stderr):
+    def __init__(self, min_value=0, max_value=100, width=100, frequency=1, stream=sys.stderr):
         self.max_value = max_value
         self.min_value = min_value
         self.value = min_value

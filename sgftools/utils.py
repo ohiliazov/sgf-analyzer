@@ -13,12 +13,16 @@ def save_to_file(sgf_fn, content):
         f.write(str(content))
 
 
+def is_pass(board_size, pos):
+    return True if pos in ["", "pass"] or (pos == "tt" and board_size <= 19) else False
+
+
 def convert_position(board_size, pos):
     """
     Convert SGF coordinates to board position coordinates
     Example aa -> A1, qq -> P15
     """
-    if pos == "" or (pos == "tt" and board_size <= 19):
+    if is_pass(board_size, pos):
         return "pass"
 
     x = BOARD_COORD[SGF_COORD.index(pos[0])].upper()
@@ -33,7 +37,7 @@ def parse_position(board_size, pos):
     Example A1 -> aa, P15 -> qq
     """
     # Pass moves are the empty string in sgf files
-    if pos == "pass":
+    if is_pass(board_size, pos):
         return ""
 
     x = BOARD_COORD.index(pos[0].lower())

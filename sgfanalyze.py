@@ -140,7 +140,7 @@ def analyze_sgf(args, sgf_to_analyze):
                             args.skip_black and previous_player == "black"):
                         (analysis_comment, lb_values, tr_values) = annotations.format_analysis(prev_stats,
                                                                                                prev_move_list,
-                                                                                               this_move)
+                                                                                               this_move, board_size)
                         cursor.previous()
                         # adding comment to sgf with suggested alternative variations
                         annotations.annotate_sgf(cursor, analysis_comment, lb_values, tr_values)

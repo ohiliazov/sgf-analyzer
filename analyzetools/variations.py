@@ -99,7 +99,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
                     move_list_to_display.append(node["move_list"][i])
 
             (analysis_comment, lb_values, tr_values) = annotations.format_analysis(node["stats"], move_list_to_display,
-                                                                                   None)
+                                                                                   None, board_size)
             annotations.annotate_sgf(cursor, analysis_comment, lb_values, tr_values)
 
         for i in range(len(node["children"])):
