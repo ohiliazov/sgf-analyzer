@@ -1,8 +1,6 @@
 import datetime
 import os
-import sys
 import time
-import traceback
 
 import arguments
 import config
@@ -14,6 +12,7 @@ from sgftools import annotations
 from sgftools.leela import Leela
 from sgftools.utils import save_to_file, convert_position, graph_winrates
 from sgftools.progressbar import ProgressBar
+from sgftools.logger import analyzer_logger
 
 
 class PlayedTwiceError(Exception):
@@ -27,17 +26,15 @@ def is_skipped(args, player_color):
 def analyze_sgf(args, sgf_to_analyze):
     time_start = datetime.datetime.now()
 
-    if args.verbosity > 0:
-        print(f"SGF: {sgf_to_analyze}\n"
-              f"Leela analysis started at {time_start.strftime('%H:%M:%S')}\n"
-              f"Game moves analysis: {args.analyze_time:d} seconds per move\n"
-              f"Variations analysis: {args.variations_time:d} seconds per move", file=sys.stderr)
+    analyzer_logger.info(f"File to analyze: {sgf_to_analyze}")
+    analyzer_logger.info(f"Game analysis started.")
+    analyzer_logger.info(f"Time settings: main line {args.analyze_time:d} seconds/move, "
+                         f"variations {args.variations_time:d} seconds/move")
 
     sgf = parse_sgf(sgf_to_analyze)
     base_dir = prepare_checkpoint_dir(sgf)
 
-    if args.verbosity > 1:
-        print("Checkpoint dir: %s" % base_dir, file=sys.stderr)
+    analyzer_logger.info(f"Checkpoint dir: {base_dir}")
 
     # Set up SGF cursor and get values from first node
     cursor = sgf.cursor()
@@ -48,7 +45,7 @@ def analyze_sgf(args, sgf_to_analyze):
     komi = game_settings['komi']
 
     if board_size != 19:
-        print("WARNING: board size is not 19 so Leela could be much weaker and less accurate", file=sys.stderr)
+        analyzer_logger.warning("Board size is not 19 so Leela could be much weaker and less accurate.")
 
     # First loop for comments parsing
 
@@ -71,7 +68,6 @@ def analyze_sgf(args, sgf_to_analyze):
 
     try:
         progress_bar = ProgressBar(max_value=analyze_tasks)
-        print(f"Executing analysis for {analyze_tasks} moves", file=sys.stderr)
 
         leela.start()
         progress_bar.start()
@@ -84,6 +80,8 @@ def analyze_sgf(args, sgf_to_analyze):
         prev_move_list = []
         has_prev = False
         previous_player = None
+
+        analyzer_logger.info(f"Executing analysis for {analyze_tasks} moves")
 
         # analyze main line, without variations
         while not cursor.atEnd:
@@ -182,9 +180,6 @@ def analyze_sgf(args, sgf_to_analyze):
             graph_winrates(collected_stats, sgf_to_analyze)
 
         # Now fill in variations for everything we need (suggested variations)
-        print("Exploring variations for %d moves with %d steps" % (variations_tasks, args.variations_depth),
-              file=sys.stderr)
-
         progress_bar = ProgressBar(max_value=variations_tasks)
         progress_bar.start()
 
@@ -198,6 +193,9 @@ def analyze_sgf(args, sgf_to_analyze):
         cursor = sgf.cursor()
         leela.start()
         add_moves_to_leela(cursor, leela)
+
+        analyzer_logger.info(
+            f"Exploring variations for {variations_tasks:d} moves with {args.variations_depth:d} steps")
 
         while not cursor.atEnd:
             cursor.next()
@@ -223,16 +221,14 @@ def analyze_sgf(args, sgf_to_analyze):
         progress_bar.finish()
 
     except:
-        traceback.print_exc()
-        print("Failure, reporting partial results...", file=sys.stderr)
+        analyzer_logger.critical("Failure, reporting partial results...")
     finally:
         leela.stop()
 
     time_stop = datetime.datetime.now()
 
-    if args.verbosity > 0:
-        print("Leela analysis stopped at %s" % time_stop.strftime('%H:%M:%S'), file=sys.stderr)
-        print("Elapsed time: %s" % (time_stop - time_start), file=sys.stderr)
+    analyzer_logger.info(f"Leela analysis stopped at {time_stop.strftime('%H:%M:%S')}")
+    analyzer_logger.info(f"Elapsed time: {time_stop - time_start}")
 
     # delay in case of sequential running of several analysis
     time.sleep(1)

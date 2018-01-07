@@ -4,7 +4,7 @@ import sys
 import traceback
 
 import config
-
+from sgftools.logger import analyzer_logger
 
 def retry_analysis(restarts):
     def wrapper(fn):
@@ -27,13 +27,10 @@ def retry_analysis(restarts):
 def do_analyze(leela, base_dir, verbosity, seconds_per_search):
     ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(seconds_per_search) + "sec"
     ckpt_fn = os.path.join(base_dir, ckpt_hash)
-    # if verbosity > 2:
-    #     print("Looking for checkpoint file: %s" % ckpt_fn, file=sys.stderr)
 
     if os.path.exists(ckpt_fn) and not config.skip_checkpoints:
         skipped = True
-        if verbosity > 0:
-            print("Loading checkpoint file: %s" % ckpt_fn, file=sys.stderr)
+        analyzer_logger.info("Loading checkpoint file: %s" % ckpt_fn)
         with open(ckpt_fn, 'rb') as ckpt_file:
             stats, move_list = pickle.load(ckpt_file)
             ckpt_file.close()
@@ -46,6 +43,8 @@ def do_analyze(leela, base_dir, verbosity, seconds_per_search):
             pickle.dump((stats, move_list), ckpt_file)
             ckpt_file.close()
 
+    analyzer_logger.debug(f"Move stats: {stats}")
+    analyzer_logger.debug(f"Move list: {move_list}")
     return stats, move_list, skipped
 
 
