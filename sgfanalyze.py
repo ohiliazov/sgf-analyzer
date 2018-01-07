@@ -223,6 +223,7 @@ def analyze_sgf(args, sgf_to_analyze):
 
     except:
         analyzer_logger.critical(f"{traceback.format_exc()}")
+        traceback.print_exc()
     finally:
         leela.stop()
 
