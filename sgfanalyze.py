@@ -1,6 +1,7 @@
 import datetime
 import os
 import time
+import traceback
 
 import arguments
 import config
@@ -221,6 +222,7 @@ def analyze_sgf(args, sgf_to_analyze):
         progress_bar.finish()
 
     except:
+        traceback.print_exc()
         analyzer_logger.critical("Failure, reporting partial results...")
     finally:
         leela.stop()
