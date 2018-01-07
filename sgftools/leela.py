@@ -2,6 +2,8 @@ import sys
 import re
 import hashlib
 from subprocess import Popen, PIPE
+
+import config
 from sgftools.readerthread import start_reader_thread, ReaderThread
 from sgftools.utils import convert_position, parse_position
 from time import sleep
@@ -185,7 +187,7 @@ class GTPConsole:
 
             self.parse_status_update("".join(err))
 
-            if '=' in out:
+            if out:
                 break
 
             updated += 1
@@ -313,7 +315,7 @@ class Leela(GTPConsole):
     bookmove_regex = r'([0-9]+) book moves, ([0-9]+) total positions'
     finished_regex = r'= ([A-Z][0-9]+|resign|pass)'
 
-    arguments = ['--gtp', '--noponder']
+    arguments = ['--gtp', '--noponder', '--nobook', '--playouts', str(config.playouts)]
 
     def parse_status_update(self, message):
         m = re.match(self.update_regex, message)
@@ -322,10 +324,9 @@ class Leela(GTPConsole):
             visits = int(m.group(1))
             winrate = str_to_percent(m.group(2))
             seq = m.group(3)
-            seq = [parse_position(self.board_size, p) for p in seq.split()]
-
-            return {'visits': visits, 'winrate': winrate, 'seq': seq}
-        return {}
+            gtp_logger.info(f"Visited {visits} positions, "
+                            f"black winrate {round(winrate*100, 2)}%, "
+                            f"PV: {' '.join([move for move in seq.split()])}")
 
     def parse_bookmove(self, stats, line):
         # Find bookmove string
