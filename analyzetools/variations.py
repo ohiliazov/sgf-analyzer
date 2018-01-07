@@ -29,7 +29,6 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
         for move in move_list:
             # Don't expand on the actual game line as a variation!
             if node["is_root"] and move["pos"] == game_move:
-                node["children"].append(None)
                 continue
 
             subhistory = node["history"][:]
@@ -66,7 +65,8 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
     for i in range(args.variations_depth):
         if len(leaves) > 0:
             for leaf in leaves:
-                analyze_and_expand(leaf)
+                if not len(leaf['history']) > args.variations_depth:
+                    analyze_and_expand(leaf)
 
     def advance(cursor, color, mv):
         found_child_idx = None
