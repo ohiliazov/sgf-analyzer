@@ -99,3 +99,4 @@ def graph_winrates(winrates, sgf_fn):
     # in this script for pdf it use the same file name as provided sgf file to avoid extra parameters
     file_name = f"{os.path.splitext(sgf_fn)[0]}_graph.pdf"
     plt.savefig(file_name, dpi=200, format='pdf', bbox_inches='tight')
+    plt.close()
