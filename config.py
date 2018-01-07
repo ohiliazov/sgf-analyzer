@@ -18,7 +18,7 @@ variations_time = 5
 # THRESHOLDS AND DEPTH OF ANALYSIS
 analyze_threshold = 0.05    # Displays analysis data to moves with at least this winrate drop.
 variations_threshold = 0.1  # Analyzes moves with at least this winrate drop
-variations_depth = 1        # How deep the move should be analyzed?
+variations_depth = 2        # How deep the move should be analyzed?
 num_to_show = 7             # How many moves to show from perfect variation
 
 # MISCELLANEOUS

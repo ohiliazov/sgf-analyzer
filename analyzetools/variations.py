@@ -66,7 +66,7 @@ def do_variations(cursor, leela, stats, move_list, board_size, game_move, base_d
     for i in range(args.variations_depth):
         if len(leaves) > 0:
             for leaf in leaves:
-                    analyze_and_expand(leaf)
+                analyze_and_expand(leaf)
 
     def advance(cursor, color, mv):
         found_child_idx = None
