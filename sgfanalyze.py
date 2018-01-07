@@ -222,8 +222,7 @@ def analyze_sgf(args, sgf_to_analyze):
         progress_bar.finish()
 
     except:
-        traceback.print_exc()
-        analyzer_logger.critical("Failure, reporting partial results...")
+        analyzer_logger.critical(f"{traceback.format_exc()}")
     finally:
         leela.stop()
 
