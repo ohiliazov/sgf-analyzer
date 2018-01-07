@@ -1,4 +1,4 @@
-from sgflib import Property, Node
+from sgflib import Property
 from sgftools.utils import convert_position, is_pass
 
 
