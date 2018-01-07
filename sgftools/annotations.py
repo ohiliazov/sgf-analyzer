@@ -81,7 +81,7 @@ def format_analysis(stats, move_list, this_move, board_size):
 
 def annotate_sgf(cursor, comment, LB_values, TR_values):
     c_node = cursor.node
-    if c_node.has_key('C'):
+    if 'C' in c_node:
         c_node['C'].data[0] += comment
     else:
         c_node.add_property(Property('C', [comment]))

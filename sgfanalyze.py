@@ -91,7 +91,7 @@ def analyze_sgf(args, sgf_to_analyze):
             move_num += 1
             this_move = add_moves_to_leela(cursor, leela)
 
-            current_player = 'black' if 'W' in cursor.node.data else 'white'
+            current_player = 'black' if 'W' in cursor.node else 'white'
 
             if previous_player == current_player:
                 raise PlayedTwiceError
@@ -187,6 +187,12 @@ def analyze_sgf(args, sgf_to_analyze):
 
         progress_bar = ProgressBar(max_value=variations_tasks)
         progress_bar.start()
+
+        leela = Leela(board_size=board_size,
+                      path_to_exec=args.path_to_leela,
+                      handicap_stones=handicap_stones,
+                      komi=komi,
+                      seconds_per_search=args.variations_time)
 
         move_num = -1
         cursor = sgf.cursor()

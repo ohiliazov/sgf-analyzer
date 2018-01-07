@@ -2,11 +2,11 @@ import sys
 import re
 import hashlib
 from subprocess import Popen, PIPE
-import config
-from sgftools.readerthread import start_reader_thread
+from sgftools.readerthread import start_reader_thread, ReaderThread
 from sgftools.utils import convert_position, parse_position
 from time import sleep
 from .logger import gtp_logger
+
 
 def str_to_percent(value: str):
     return 0.01 * float(value.strip())
@@ -48,13 +48,13 @@ class GTPConsole:
         return history_hash.hexdigest()
 
     def add_move_to_history(self, color: str, pos: str):
-        """Convert given SGF coordinates to board coordinates and writes them to history as a command to GTP console"""
+        """ Convert given SGF coordinates to board coordinates and writes them to history as a command to GTP console"""
         move = convert_position(self.board_size, pos)
         command = f"play {color} {move}"
         self.history.append(command)
 
     def pop_move_from_history(self, count=1):
-        """Removes given number of last commands from history"""
+        """ Removes given number of last commands from history"""
         for i in range(count):
             self.history.pop()
 
@@ -62,7 +62,7 @@ class GTPConsole:
         self.history.clear()
 
     def whose_turn(self) -> str:
-        """Return color of next move, based on number of handicap stones and moves."""
+        """ Return color of next move, based on number of handicap stones and moves."""
         if len(self.history) == 0:
             return "white" if self.handicap_stones else "black"
         else:
@@ -109,7 +109,8 @@ class GTPConsole:
         """Start GTP console"""
         gtp_logger.info("Starting GTP console...")
 
-        process = Popen([self.executable] + self.arguments, stdout=PIPE, stdin=PIPE, stderr=PIPE, universal_newlines=True)
+        process = Popen([self.executable] + self.arguments, stdout=PIPE, stdin=PIPE, stderr=PIPE,
+                        universal_newlines=True)
         sleep(2)
 
         self.process = process
@@ -219,7 +220,7 @@ class GTPConsole:
             winrate = (stats['winrate'] * 100)
             visits = stats['visits']
             gtp_logger.info(f"Chosen move: {chosen_move:3} | Best move: {best_move:3} | "
-                     f"Winrate: {winrate:.2f}% | Visits: {visits}")
+                            f"Winrate: {winrate:.2f}% | Visits: {visits}")
         else:
             gtp_logger.info(f"Chosen move: {chosen_move:3}")
 
@@ -260,7 +261,6 @@ class GTPConsole:
             for k in required_keys:
                 if k not in stats:
                     print("WARNING: analysis stats missing %s data" % k, file=sys.stderr)
-
 
             # In the case where Leela resigns, just replace with the move Leela did think was best
             if stats['chosen'] == "resign":

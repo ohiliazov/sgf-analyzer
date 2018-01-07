@@ -10,7 +10,7 @@ verbosity = 0
 path_to_leela = './bots/leela/leela_0110_linux_x64'
 analyze_time = 5
 variations_time = 5
-variations_depth = 5
+variations_depth = 1
 
 
 checkpoint_dir = './.leela_checkpoints'
