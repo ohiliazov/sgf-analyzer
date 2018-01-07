@@ -11,7 +11,7 @@ analyze_end = float('inf')
 # TIME SETTINGS
 analyze_time = 1000
 variations_time = 1000
-playouts = 100000
+playouts = 50000
 
 # THRESHOLDS AND DEPTH OF ANALYSIS
 analyze_threshold = 0.05    # Displays analysis data to moves with at least this winrate drop.

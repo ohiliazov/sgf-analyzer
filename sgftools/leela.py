@@ -325,7 +325,7 @@ class Leela(GTPConsole):
             winrate = str_to_percent(m.group(2))
             seq = m.group(3)
             gtp_logger.info(f"Visited {visits} positions, "
-                            f"black winrate {round(winrate*100, 2)}%, "
+                            f"black winrate {round(self.flip_winrate(winrate)*100, 2)}%, "
                             f"PV: {' '.join([move for move in seq.split()])}")
 
     def parse_bookmove(self, stats, line):
