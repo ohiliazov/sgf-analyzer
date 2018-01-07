@@ -79,7 +79,7 @@ class GTPConsole:
         timeout = 200
 
         # Sending command
-        gtp_logger.info(f"Sending command [{']['.join(command.splitlines())}] to GTP console...")
+        gtp_logger.debug(f"Sending command [{']['.join(command.splitlines())}] to GTP console...")
 
         write_to_stdin(self.process, command)
 
@@ -169,7 +169,7 @@ class GTPConsole:
         self.send_command(f'time_left black {self.seconds_per_search:d} 1')
         self.send_command(f'time_left white {self.seconds_per_search:d} 1')
 
-        gtp_logger.warning(f"Analyzing state: {self.whose_turn()} to play\n{self.show_board()}")
+        gtp_logger.debug(f"Analyzing state: {self.whose_turn()} to play\n{self.show_board()}")
 
         # Generate next move
         write_to_stdin(process, f"genmove {self.whose_turn()}")
@@ -228,8 +228,8 @@ class GTPConsole:
 
     def parse_analysis(self, stdout, stderr):
         """Parse stdout & stderr."""
-        gtp_logger.warning("LEELA STDOUT:\n" + "".join(stdout) + "\END OF LEELA STDOUT")
-        gtp_logger.warning("LEELA STDERR:\n" + "".join(stderr) + "\END OF LEELA STDERR")
+        gtp_logger.debug(f"GTP console stdout:\n{''.join(stdout)}")
+        gtp_logger.debug(f"GTP console stderr:\n{''.join(stderr)}")
 
         stats = {}
         move_list = []

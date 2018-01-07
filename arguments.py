@@ -6,11 +6,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("path_to_sgf",
                     help="SGF file to analyze")
 
-parser.add_argument('-v', '--verbosity',
-                    default=config.verbosity,
-                    type=int,
-                    help="Set the verbosity level, 0: progress only, 1: progress+status, 2: progress+status+state")
-
 parser.add_argument('--leela',
                     default=config.path_to_leela,
                     dest='path_to_leela',

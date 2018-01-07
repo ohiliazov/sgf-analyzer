@@ -27,15 +27,14 @@ def is_skipped(args, player_color):
 def analyze_sgf(args, sgf_to_analyze):
     time_start = datetime.datetime.now()
 
-    analyzer_logger.info(f"File to analyze: {sgf_to_analyze}")
-    analyzer_logger.info(f"Game analysis started.")
+    analyzer_logger.info(f"Game analysis started to file: {sgf_to_analyze}")
     analyzer_logger.info(f"Time settings: main line {args.analyze_time:d} seconds/move, "
                          f"variations {args.variations_time:d} seconds/move")
 
     sgf = parse_sgf(sgf_to_analyze)
     base_dir = prepare_checkpoint_dir(sgf)
 
-    analyzer_logger.info(f"Checkpoint dir: {base_dir}")
+    analyzer_logger.debug(f"Using checkpoint dir: {base_dir}")
 
     # Set up SGF cursor and get values from first node
     cursor = sgf.cursor()
@@ -96,7 +95,7 @@ def analyze_sgf(args, sgf_to_analyze):
                 raise PlayedTwiceError
 
             if move_num in moves_to_analyze:
-                stats, move_list, skipped = do_analyze(leela, base_dir, args.verbosity, args.analyze_time)
+                stats, move_list, skipped = do_analyze(leela, base_dir, args.analyze_time)
 
                 # Here we store ALL statistics
                 collected_stats[move_num] = stats
@@ -230,7 +229,6 @@ def analyze_sgf(args, sgf_to_analyze):
     time_stop = datetime.datetime.now()
 
     analyzer_logger.info(f"Leela analysis stopped at {time_stop.strftime('%H:%M:%S')}")
-    analyzer_logger.info(f"Elapsed time: {time_stop - time_start}")
 
     # delay in case of sequential running of several analysis
     time.sleep(1)

@@ -24,7 +24,7 @@ def retry_analysis(restarts):
 
 
 @retry_analysis(config.restarts)
-def do_analyze(leela, base_dir, verbosity, seconds_per_search):
+def do_analyze(leela, base_dir, seconds_per_search):
     ckpt_hash = 'analyze_' + leela.history_hash() + "_" + str(seconds_per_search) + "sec"
     ckpt_fn = os.path.join(base_dir, ckpt_hash)
 
@@ -33,7 +33,6 @@ def do_analyze(leela, base_dir, verbosity, seconds_per_search):
         analyzer_logger.info("Loading checkpoint file: %s" % ckpt_fn)
         with open(ckpt_fn, 'rb') as ckpt_file:
             stats, move_list = pickle.load(ckpt_file)
-            ckpt_file.close()
     else:
         skipped = False
         leela.clear_board()
@@ -41,7 +40,6 @@ def do_analyze(leela, base_dir, verbosity, seconds_per_search):
         stats, move_list = leela.analyze()
         with open(ckpt_fn, 'wb') as ckpt_file:
             pickle.dump((stats, move_list), ckpt_file)
-            ckpt_file.close()
 
     analyzer_logger.debug(f"Move stats: {stats}")
     analyzer_logger.debug(f"Move list: {move_list}")
