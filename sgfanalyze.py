@@ -158,11 +158,11 @@ def analyze_sgf(args, sgf_to_analyze):
                 save_to_file(sgf_to_analyze, sgf)
 
                 if not skipped:
-                    progress_bar.update(analyze_tasks_done, analyze_tasks)
 
                     if args.win_graph and len(collected_stats) > 1:
                         graph_winrates(collected_stats, sgf_to_analyze)
 
+                progress_bar.update(analyze_tasks_done, analyze_tasks)
                 progress_bar.set_message(None)
 
             else:

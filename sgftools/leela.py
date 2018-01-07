@@ -260,11 +260,15 @@ class GTPConsole:
             # Check for missed data
             for k in required_keys:
                 if k not in stats:
-                    print("WARNING: analysis stats missing %s data" % k, file=sys.stderr)
+                    gtp_logger.warning("Analysis stats missing %s data" % k, file=sys.stderr)
 
             # In the case where Leela resigns, just replace with the move Leela did think was best
             if stats['chosen'] == "resign":
                 stats['chosen'] = stats['best']
+
+        move_list = sorted(move_list,
+                           key=(lambda move: 1000000000000000 if move['pos'] == stats['best'] else move['visits']),
+                           reverse=True)
 
         return stats, move_list
 
