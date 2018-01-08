@@ -1,0 +1,8 @@
+STATS: required
+  * [winrate] - winning percenage of black player
+  * [best]    - first suggested move by GTP console
+  * [chosen]  - move actually played by GTP console
+
+STATS: Leela
+  * [bookmoves] - number of book moves
+  * [positions] - number of book positions

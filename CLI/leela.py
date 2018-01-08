@@ -49,7 +49,7 @@ class Leela(GTPConsole):
                 finished = True
 
             stats = self.parse_bookmove(stats, line)
-            stats = self.parse_move_status(stats, line)
+            stats.update(self.parse_move_status(line))
             move_list = self.parse_move(move_list, line)
 
             if finished and not summarized:
@@ -98,20 +98,19 @@ class Leela(GTPConsole):
             stats['positions'] = int(m.group(2))
         return stats
 
-    def parse_move_status(self, stats, line):
+    def parse_move_status(self, line):
         # Find status string
         m = re.match(self.status_regex, line)
         if m is not None:
-            stats['mc_winrate'] = self.flip_winrate(float(m.group(1)))
-            stats['nn_winrate'] = self.flip_winrate(float(m.group(2)))
-            stats['margin'] = m.group(3)
+            return {'mc_winrate': self.flip_winrate(float(m.group(1))),
+                    'nn_winrate': self.flip_winrate(float(m.group(2))),
+                    'margin': m.group(3)}
 
         m = re.match(self.status_regex_no_vn, line)
         if m is not None:
-            stats['mc_winrate'] = self.flip_winrate(float(m.group(1)))
-            stats['margin'] = m.group(2)
-
-        return stats
+            return {'mc_winrate': self.flip_winrate(float(m.group(1))),
+                    'margin': m.group(2)}
+        return {}
 
     def parse_move(self, move_list, line):
         m = re.match(self.move_regex, line)
@@ -208,7 +207,7 @@ class LeelaZero(Leela):
         for line in stderr:
             line = line.strip()
             stats = self.parse_bookmove(stats, line)
-            stats = self.parse_move_status(stats, line)
+            stats.update(self.parse_move_status(line))
             move_list = self.parse_move(move_list, line)
             stats = self.parse_status(stats, line)
 
@@ -228,12 +227,12 @@ class LeelaZero(Leela):
 
         return stats, move_list
 
-    def parse_move_status(self, stats, line):
+    def parse_move_status(self, line):
         # Find status string
         m = re.match(self.status_regex, line)
         if m is not None:
-            stats['winrate'] = self.flip_winrate(float(m.group(1)))
-        return stats
+            return {'winrate': self.flip_winrate(float(m.group(1)))}
+        return {}
 
     def parse_move(self, move_list, line):
         m = re.match(self.move_regex, line)

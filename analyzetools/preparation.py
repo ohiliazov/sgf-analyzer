@@ -103,7 +103,7 @@ def collect_requested_moves(cursor, args):
             if args.wipe_comments:
                 node_comment.data[0] = ""
 
-        if args.analyze_start < move_num < args.analyze_end:
+        if args.analyze_start <= move_num <= args.analyze_end:
             moves_to_analyze[move_num] = True
 
     return moves_to_analyze, moves_to_variations

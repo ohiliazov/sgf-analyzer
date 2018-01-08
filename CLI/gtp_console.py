@@ -226,7 +226,7 @@ class GTPConsole:
     def parse_bookmove(self, stats, line):
         pass
 
-    def parse_move_status(self, stats, line):
+    def parse_move_status(self, line):
         pass
 
     def parse_move(self, move_list, line):

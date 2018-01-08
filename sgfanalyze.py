@@ -177,6 +177,9 @@ def analyze_sgf(args, sgf_to_analyze):
                 progress_bar.update(analyze_tasks_done, analyze_tasks)
                 progress_bar.set_message(None)
 
+                if 1 - config.stop_on_winrate < stats['winrate'] > config.stop_on_winrate:
+                    break
+
             else:
                 prev_stats = {}
                 prev_move_list = []
@@ -254,6 +257,8 @@ if __name__ == '__main__':
                             if file.endswith('.sgf') and not file.endswith('_analyzed.sgf')]
     else:
         games_to_analyze = [args.path_to_sgf]
+
+    analyzer_logger.info(f"Found {len(games_to_analyze)} games to analyze.")
 
     for game in games_to_analyze:
         analyze_sgf(args, game)
