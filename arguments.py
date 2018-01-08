@@ -6,11 +6,23 @@ parser = argparse.ArgumentParser()
 parser.add_argument("path_to_sgf",
                     help="SGF file to analyze")
 
+parser.add_argument('--use-console',
+                    default='leela',
+                    dest='gtp_console',
+                    metavar="CMD",
+                    help="Command to run Leela executable")
+
 parser.add_argument('--leela',
                     default=config.path_to_leela,
                     dest='path_to_leela',
                     metavar="CMD",
                     help="Command to run Leela executable")
+
+parser.add_argument('--leela-zero',
+                    default=config.path_to_leela_zero,
+                    dest='path_to_leela_zero',
+                    metavar="CMD",
+                    help="Command to run LeelaZero executable")
 
 parser.add_argument('--analyze-time',
                     dest='analyze_time',

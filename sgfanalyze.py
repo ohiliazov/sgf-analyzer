@@ -10,7 +10,7 @@ from analyzetools.variations import do_variations
 from analyzetools.leelatools import add_moves_to_leela
 from analyzetools.preparation import parse_sgf, prepare_checkpoint_dir, get_initial_values, collect_requested_moves
 from sgftools import annotations
-from sgftools.leela import Leela
+from CLI import Leela, LeelaZero, GTPConsoleError
 from sgftools.utils import save_to_file, convert_position, graph_winrates
 from sgftools.progressbar import ProgressBar
 from sgftools.logger import analyzer_logger
@@ -56,11 +56,24 @@ def analyze_sgf(args, sgf_to_analyze):
     analyze_tasks_done = 0
     variations_tasks_done = 0
 
-    leela = Leela(board_size=board_size,
-                  path_to_exec=args.path_to_leela,
-                  handicap_stones=handicap_stones,
-                  komi=komi,
-                  seconds_per_search=args.analyze_time)
+    if args.gtp_console == 'leela':
+        gtp_console = Leela(
+            board_size=board_size,
+            path_to_exec=args.path_to_leela,
+            handicap_stones=handicap_stones,
+            komi=komi,
+            seconds_per_search=args.analyze_time
+        )
+    elif args.gtp_console == 'leela-zero':
+        gtp_console = LeelaZero(
+            board_size=board_size,
+            path_to_exec=args.path_to_leela_zero,
+            handicap_stones=handicap_stones,
+            komi=komi,
+            seconds_per_search=args.analyze_time
+        )
+    else:
+        raise GTPConsoleError("No GTP console is used")
 
     collected_stats = {}
     collected_move_lists = {}
@@ -69,11 +82,11 @@ def analyze_sgf(args, sgf_to_analyze):
     try:
         progress_bar = ProgressBar(max_value=analyze_tasks)
 
-        leela.start()
+        gtp_console.start()
         progress_bar.start()
 
         cursor = sgf.cursor()
-        add_moves_to_leela(cursor, leela)
+        add_moves_to_leela(cursor, gtp_console)
 
         move_num = -1
         prev_stats = {}
@@ -87,7 +100,7 @@ def analyze_sgf(args, sgf_to_analyze):
         while not cursor.atEnd:
             cursor.next()
             move_num += 1
-            this_move = add_moves_to_leela(cursor, leela)
+            this_move = add_moves_to_leela(cursor, gtp_console)
 
             current_player = 'black' if 'W' in cursor.node else 'white'
 
@@ -95,7 +108,7 @@ def analyze_sgf(args, sgf_to_analyze):
                 raise PlayedTwiceError
 
             if move_num in moves_to_analyze:
-                stats, move_list, skipped = do_analyze(leela, base_dir, args.analyze_time)
+                stats, move_list, skipped = do_analyze(gtp_console, base_dir, args.analyze_time)
 
                 # Here we store ALL statistics
                 collected_stats[move_num] = stats
@@ -109,7 +122,7 @@ def analyze_sgf(args, sgf_to_analyze):
                 if 'winrate' in stats and (move_num - 1) in best_moves:
                     if this_move != best_moves[move_num - 1]['pos']:
                         delta = stats['winrate'] - best_moves[move_num - 1]['winrate']
-                        delta = min(0.0, (-delta if leela.whose_turn() == "black" else delta))
+                        delta = min(0.0, (-delta if gtp_console.whose_turn() == "black" else delta))
 
                     if -delta > args.analyze_threshold:
                         (delta_comment, delta_lb_values) = annotations.format_delta_info(delta, this_move, board_size)
@@ -136,7 +149,6 @@ def analyze_sgf(args, sgf_to_analyze):
                         move_num - 1) in moves_to_variations):
                     if not (args.skip_white and previous_player == "white") and not (
                             args.skip_black and previous_player == "black"):
-
                         def filter_move_list(move_list):
                             visit_sums = sum([move['visits'] for move in move_list])
                             return [move for move in move_list if
@@ -173,8 +185,8 @@ def analyze_sgf(args, sgf_to_analyze):
             previous_player = current_player
 
         progress_bar.finish()
-        leela.stop()
-        leela.clear_history()
+        gtp_console.stop()
+        gtp_console.clear_history()
 
         if args.win_graph:
             graph_winrates(collected_stats, sgf_to_analyze)
@@ -183,16 +195,16 @@ def analyze_sgf(args, sgf_to_analyze):
         progress_bar = ProgressBar(max_value=variations_tasks)
         progress_bar.start()
 
-        leela = Leela(board_size=board_size,
-                      path_to_exec=args.path_to_leela,
-                      handicap_stones=handicap_stones,
-                      komi=komi,
-                      seconds_per_search=args.variations_time)
+        gtp_console = Leela(board_size=board_size,
+                            path_to_exec=args.path_to_leela,
+                            handicap_stones=handicap_stones,
+                            komi=komi,
+                            seconds_per_search=args.variations_time)
 
         move_num = -1
         cursor = sgf.cursor()
-        leela.start()
-        add_moves_to_leela(cursor, leela)
+        gtp_console.start()
+        add_moves_to_leela(cursor, gtp_console)
 
         analyzer_logger.info(
             f"Exploring variations for {variations_tasks:d} moves with {args.variations_depth:d} steps")
@@ -200,7 +212,7 @@ def analyze_sgf(args, sgf_to_analyze):
         while not cursor.atEnd:
             cursor.next()
             move_num += 1
-            add_moves_to_leela(cursor, leela)
+            add_moves_to_leela(cursor, gtp_console)
 
             if move_num not in moves_to_variations:
                 continue
@@ -212,7 +224,7 @@ def analyze_sgf(args, sgf_to_analyze):
 
             next_game_move = next_move_pos(cursor)
 
-            do_variations(cursor, leela, stats, move_list, board_size, next_game_move, base_dir, args)
+            do_variations(cursor, gtp_console, stats, move_list, board_size, next_game_move, base_dir, args)
             variations_tasks_done += 1
 
             save_to_file(sgf_to_analyze, sgf)
@@ -224,7 +236,7 @@ def analyze_sgf(args, sgf_to_analyze):
         analyzer_logger.critical(f"{traceback.format_exc()}")
         traceback.print_exc()
     finally:
-        leela.stop()
+        gtp_console.stop()
 
     time_stop = datetime.datetime.now()
 
