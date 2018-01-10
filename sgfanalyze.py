@@ -32,7 +32,7 @@ def analyze_sgf(args, sgf_to_analyze):
                          f"variations {args.variations_time:d} seconds/move")
 
     sgf = parse_sgf(sgf_to_analyze)
-    base_dir = prepare_checkpoint_dir(sgf)
+    base_dir = prepare_checkpoint_dir(sgf, args.gtp_console)
 
     analyzer_logger.debug(f"Using checkpoint dir: {base_dir}")
 

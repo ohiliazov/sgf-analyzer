@@ -20,14 +20,16 @@ def parse_sgf(path_to_sgf):
     return SGFParser(data).parse()
 
 
-def prepare_checkpoint_dir(sgf):
+def prepare_checkpoint_dir(sgf, gtp_console):
     """Create unique checkpoint directory"""
-    if not os.path.exists(config.checkpoint_dir):
-        os.mkdir(config.checkpoint_dir)
+    checkpoint_dir = config.checkpoint_dir.format(gtp_console)
+
+    if not os.path.exists(checkpoint_dir):
+        os.mkdir(checkpoint_dir)
 
     # Get unique hash based on content
     base_hash = hashlib.md5(str(sgf).encode()).hexdigest()
-    base_dir = os.path.join(config.checkpoint_dir, base_hash)
+    base_dir = os.path.join(checkpoint_dir, base_hash)
 
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)

@@ -21,7 +21,7 @@ variations_depth = 3        # How deep the move should be analyzed?
 num_to_show = float('inf')  # How many moves to show from perfect variation
 
 # MISCELLANEOUS
-checkpoint_dir = './.leela_checkpoints'
+checkpoint_dir = './.{}_checkpoints'
 skip_checkpoints = False
 show_winrate = True
 restarts = 0
