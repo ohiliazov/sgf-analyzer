@@ -135,7 +135,7 @@ def analyze_sgf(args, sgf_to_analyze):
 
                 if args.show_winrate and -delta > args.analyze_threshold:
                     progress_bar.set_message(f'winrate {(stats["winrate"]*100):.2f}% | '
-                                             f'{current_player} '
+                                             f'{previous_player} '
                                              f'{convert_position(board_size, this_move):<3} | '
                                              f'delta {(delta*100):.2f}%')
 
@@ -177,7 +177,7 @@ def analyze_sgf(args, sgf_to_analyze):
                 progress_bar.update(analyze_tasks_done, analyze_tasks)
                 progress_bar.set_message(None)
 
-                if 1 - config.stop_on_winrate < stats['winrate'] > config.stop_on_winrate:
+                if 'winrate' in stats and not 1 - config.stop_on_winrate < stats['winrate'] < config.stop_on_winrate:
                     break
 
             else:
