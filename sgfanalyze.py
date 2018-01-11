@@ -167,12 +167,12 @@ def analyze_sgf(args, sgf_to_analyze):
                 analyze_tasks_done += 1
 
                 # save to file results with analyzing main line
-                save_to_file(sgf_to_analyze, sgf)
+                save_to_file(sgf_to_analyze, sgf, args.gtp_console)
 
                 if not skipped:
 
                     if args.win_graph and len(collected_stats) > 1:
-                        graph_winrates(collected_stats, sgf_to_analyze)
+                        graph_winrates(collected_stats, sgf_to_analyze, args.gtp_console)
 
                 progress_bar.update(analyze_tasks_done, analyze_tasks)
                 progress_bar.set_message(None)
@@ -190,9 +190,6 @@ def analyze_sgf(args, sgf_to_analyze):
         progress_bar.finish()
         gtp_console.stop()
         gtp_console.clear_history()
-
-        if args.win_graph:
-            graph_winrates(collected_stats, sgf_to_analyze)
 
         # Now fill in variations for everything we need (suggested variations)
         progress_bar = ProgressBar(max_value=variations_tasks)
@@ -230,7 +227,7 @@ def analyze_sgf(args, sgf_to_analyze):
             do_variations(cursor, gtp_console, stats, move_list, board_size, next_game_move, base_dir, args)
             variations_tasks_done += 1
 
-            save_to_file(sgf_to_analyze, sgf)
+            save_to_file(sgf_to_analyze, sgf, args.gtp_console)
             progress_bar.update(variations_tasks_done, variations_tasks)
 
         progress_bar.finish()

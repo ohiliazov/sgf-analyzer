@@ -57,13 +57,13 @@ def parse_position(board_size, pos):
         raise PointValueError(f'"{pos} is not a valid point for board size = {board_size}')
 
 
-def save_to_file(sgf_fn, content):
-    path_to_save = "_analyzed".join(os.path.splitext(sgf_fn))
+def save_to_file(sgf_fn, content, bot):
+    path_to_save = f"_analyzed_{bot}".join(os.path.splitext(sgf_fn))
     with open(path_to_save, mode='w', encoding='utf-8') as f:
         f.write(str(content))
 
 
-def graph_winrates(winrates, sgf_fn):
+def graph_winrates(winrates, sgf_fn, bot):
     x = []
     y = []
     for move_num in sorted(winrates.keys()):
@@ -97,6 +97,6 @@ def graph_winrates(winrates, sgf_fn):
     plt.ylabel("Win Rate", fontsize=12)
 
     # in this script for pdf it use the same file name as provided sgf file to avoid extra parameters
-    file_name = f"{os.path.splitext(sgf_fn)[0]}_graph.pdf"
+    file_name = f"{os.path.splitext(sgf_fn)[0]}_{bot}.pdf"
     plt.savefig(file_name, dpi=200, format='pdf', bbox_inches='tight')
     plt.close()
