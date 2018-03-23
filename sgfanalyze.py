@@ -2,13 +2,14 @@ import datetime
 import os
 import time
 import traceback
+from yaml import load
 
 import arguments
 import config
 from analyzetools.analyze import do_analyze, next_move_pos
 from analyzetools.variations import do_variations
 from analyzetools.leelatools import add_moves_to_leela
-from analyzetools.preparation import parse_sgf, prepare_checkpoint_dir, get_initial_values, collect_requested_moves
+from analyzetools.preparation import parse_sgf, make_checkpoint_dir, get_initial_values, collect_requested_moves
 from sgftools import annotations
 from CLI import Leela, LeelaZero, GTPConsoleError
 from sgftools.utils import save_to_file, convert_position, graph_winrates
@@ -25,14 +26,17 @@ def is_skipped(args, player_color):
 
 
 def analyze_sgf(args, sgf_to_analyze):
+    with open('config.yaml') as conf:
+        yconf = load(conf)
+
     time_start = datetime.datetime.now()
 
     analyzer_logger.info(f"Game analysis started to file: {sgf_to_analyze}")
-    analyzer_logger.info(f"Time settings: main line {args.analyze_time:d} seconds/move, "
-                         f"variations {args.variations_time:d} seconds/move")
+    analyzer_logger.info(f"Time settings: main line {yconf['analyze_time']:d} seconds/move, "
+                         f"variations {yconf['variations_time']:d} seconds/move")
 
     sgf = parse_sgf(sgf_to_analyze)
-    base_dir = prepare_checkpoint_dir(sgf, args.gtp_console)
+    base_dir = make_checkpoint_dir(sgf, args.gtp_console)
 
     analyzer_logger.debug(f"Using checkpoint dir: {base_dir}")
 
@@ -49,31 +53,33 @@ def analyze_sgf(args, sgf_to_analyze):
 
     # First loop for comments parsing
 
-    moves_to_analyze, moves_to_variations = collect_requested_moves(cursor, args)
+    moves_to_analyze, moves_to_variations = collect_requested_moves(cursor, yconf)
 
     analyze_tasks = len(moves_to_analyze)
     variations_tasks = len(moves_to_variations)
     analyze_tasks_done = 0
     variations_tasks_done = 0
 
-    if args.gtp_console == 'leela':
+    bot_settings = yconf['bot_settings'][args.gtp_console]
+
+    if bot_settings['type'] == 'leela':
         gtp_console = Leela(
             board_size=board_size,
-            path_to_exec=args.path_to_leela,
+            path_to_exec=bot_settings['path_to_executable'],
             handicap_stones=handicap_stones,
             komi=komi,
-            seconds_per_search=args.analyze_time
+            seconds_per_search=yconf['analyze_time']
         )
-    elif args.gtp_console == 'leela-zero':
+    elif bot_settings['type'] == 'leela-zero':
         gtp_console = LeelaZero(
             board_size=board_size,
-            path_to_exec=args.path_to_leela_zero,
+            path_to_exec=bot_settings['path_to_executable'],
             handicap_stones=handicap_stones,
             komi=komi,
-            seconds_per_search=args.analyze_time
+            seconds_per_search=yconf['analyze_time']
         )
     else:
-        raise GTPConsoleError("No GTP console is used")
+        raise GTPConsoleError("Unrecognized GTP console.")
 
     collected_stats = {}
     collected_move_lists = {}
@@ -195,11 +201,22 @@ def analyze_sgf(args, sgf_to_analyze):
         progress_bar = ProgressBar(max_value=variations_tasks)
         progress_bar.start()
 
-        gtp_console = Leela(board_size=board_size,
-                            path_to_exec=args.path_to_leela,
-                            handicap_stones=handicap_stones,
-                            komi=komi,
-                            seconds_per_search=args.variations_time)
+        if bot_settings['type'] == 'leela':
+            gtp_console = Leela(
+                board_size=board_size,
+                path_to_exec=bot_settings['path_to_executable'],
+                handicap_stones=handicap_stones,
+                komi=komi,
+                seconds_per_search=yconf['variations_time']
+            )
+        elif bot_settings['type'] == 'leela-zero':
+            gtp_console = LeelaZero(
+                board_size=board_size,
+                path_to_exec=bot_settings['path_to_executable'],
+                handicap_stones=handicap_stones,
+                komi=komi,
+                seconds_per_search=yconf['variations_time']
+            )
 
         move_num = -1
         cursor = sgf.cursor()

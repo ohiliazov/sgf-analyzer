@@ -141,6 +141,10 @@ class GTPConsole:
 
         gtp_logger.info("GTP console stopped successfully...")
 
+    def restart(self):
+        self.stop()
+        self.start()
+
     def clear_board(self):
         """Clear board"""
         self.send_command('clear_board')

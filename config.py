@@ -1,7 +1,7 @@
 # Path to executables
 path_to_leela = './bots/leela/leela_0110_linux_x64_opencl'
-path_to_leela_zero = './bots/leela-zero/leelaz'
-path_to_leela_zero_weights = './bots/leela-zero/weights.txt'
+path_to_leela_zero = '/home/gelya/PycharmProjects/leela-zero/src/leelaz'
+path_to_leela_zero_weights = './bots/weights.txt'
 path_to_aq = None
 path_to_ray = None
 
@@ -21,7 +21,6 @@ variations_depth = 3        # How deep the move should be analyzed?
 num_to_show = float('inf')  # How many moves to show from perfect variation
 
 # MISCELLANEOUS
-checkpoint_dir = './.{}_checkpoints'
 skip_checkpoints = False
 show_winrate = True
 restarts = 0

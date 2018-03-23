@@ -1,0 +1,32 @@
+move_from: 80
+move_till: 85
+stop_on_winrate: 0.80
+
+analyze_time: 60
+analyze_threhold: 0.03
+
+variations_threshold: 0.05
+move_list_threshold: 0.2  # This filters suggested move list by at least this probability
+
+variations_time: 30
+variations_depth: 3
+
+restarts: 0
+wipe_comments: False  # Store True if you want to wipe comments
+
+
+bot_settings:
+  leela:
+    type: leela
+    path_to_executable: ./bots/leela/leela_0110_linux_x64
+    max_playouts: 100000
+  leela_opencl:
+    type: leela
+    path_to_executable: ./bots/leela/leela_0110_linux_x64_opencl
+    max_playouts: 100000
+  leela-zero:
+    type: leela-zero
+    path_to_executable: /home/gelya/PycharmProjects/leela-zero/src/leelaz
+    path_to_weights: ./bots/weights.txt
+    max_playouts: 100000
+    move_list_max_length: 3   # Limits suggested moves because LeelaZero is still learning.

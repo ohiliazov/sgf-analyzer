@@ -3,38 +3,11 @@ import os
 import re
 import sys
 
-import config
+import settings
 from sgflib import SGFParser
 
 comment_regex = r"(?P<nickname>[\w\W]+)+: (?P<node_comment>[\w\W]+)+"
 
-
-def parse_sgf(path_to_sgf):
-    """Return parsed Collection from sgf"""
-    if not os.path.exists(path_to_sgf):
-        raise FileNotFoundError("No such file: %s" % path_to_sgf)
-
-    with open(path_to_sgf, 'r', encoding="utf-8") as sgf_file:
-        data = "".join([line for line in sgf_file])
-
-    return SGFParser(data).parse()
-
-
-def prepare_checkpoint_dir(sgf, gtp_console):
-    """Create unique checkpoint directory"""
-    checkpoint_dir = config.checkpoint_dir.format(gtp_console)
-
-    if not os.path.exists(checkpoint_dir):
-        os.mkdir(checkpoint_dir)
-
-    # Get unique hash based on content
-    base_hash = hashlib.md5(str(sgf).encode()).hexdigest()
-    base_dir = os.path.join(checkpoint_dir, base_hash)
-
-    if not os.path.exists(base_dir):
-        os.mkdir(base_dir)
-
-    return base_dir
 
 
 def get_initial_values(cursor):
@@ -79,7 +52,7 @@ def get_initial_values(cursor):
     return game_settings
 
 
-def collect_requested_moves(cursor, args):
+def collect_requested_moves(cursor, yconf=None):
     moves_to_analyze = {}
     moves_to_variations = {}
 
@@ -102,10 +75,10 @@ def collect_requested_moves(cursor, args):
                     moves_to_analyze[move_num] = True
                     moves_to_analyze[move_num + 1] = True
 
-            if args.wipe_comments:
+            if yconf['wipe_comments']:
                 node_comment.data[0] = ""
 
-        if args.analyze_start <= move_num <= args.analyze_end:
+        if yconf['move_from'] <= move_num <= yconf['move_till']:
             moves_to_analyze[move_num] = True
 
     return moves_to_analyze, moves_to_variations

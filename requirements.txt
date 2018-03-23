@@ -1,3 +1,13 @@
-pytest
-numpy
-matplotlib
+attrs==17.4.0
+cycler==0.10.0
+matplotlib==2.1.2
+numpy==1.14.0
+pluggy==0.6.0
+py==1.5.2
+pyparsing==2.2.0
+pytest==3.4.0
+python-dateutil==2.6.1
+pytz==2018.3
+PyYAML==3.12
+six==1.11.0
+wget==3.2
