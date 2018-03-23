@@ -10,31 +10,32 @@ from CLI.leela import Leela, LeelaZero
 from sgflib import SGFParser
 
 
+with open(settings.PATH_TO_CONFIG) as yaml_stream:
+    yaml_data = load(yaml_stream)
+
+CONFIG = yaml_data['config']
+BOTS = yaml_data['bots']
+
+
 class Bot(object):
     def factory(self, bot):
-        with open(settings.PATH_TO_CONFIG) as y:
-            bot_settings = load(y).get('bot_settings', {}).get(bot)
+        bot_settings = BOTS[bot]
 
-            if bot_settings['type'] == 'leela':
-                return Leela(**bot_settings)
-            if bot_settings['type'] == 'leela-zero':
-                return LeelaZero(**bot_settings)
+        if bot_settings['type'] == 'leela':
+            return Leela(**bot_settings)
 
-        logger.error("Config %s not found.", bot)
+        elif bot_settings['type'] == 'leela-zero':
+            return LeelaZero(**bot_settings)
+        else:
+            logger.error("Config %s not found.", bot)
 
 
 def parse_cmd_line():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(argument_default=None)
 
-    parser.add_argument(dest="path_to_sgf",
-                        nargs='+',
-                        help="SGF file to analyze")
-
-    parser.add_argument('-b', '--bot',
-                        default='leela',
-                        dest='bot',
-                        metavar="CMD",
-                        help="Config")
+    parser.add_argument("path_to_sgf", nargs='+', help="List of SGF-files to analyze.")
+    parser.add_argument('-b', '--bot', default='leela-zero', dest='bot', help="Config from config.yaml[bots] to use.")
+    parser.add_argument('--no-vars', dest='no_variations', action='store_true', help="Skip variations analysis.")
 
     return parser.parse_args()
 
@@ -59,6 +60,8 @@ def analyze_game(game, bot):
     logger.info("Started analyzing file: %s", os.path.basename(game))
     sgf = parse_sgf_file(game)
     base_dir = make_checkpoint_dir(sgf, bot)
+
+    cursor = sgf.cursor()
     logger.info("Finished analyzing file: %s", os.path.basename(game))
 
 

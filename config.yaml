@@ -1,21 +1,24 @@
-move_from: 80
-move_till: 85
-stop_on_winrate: 0.80
+config:
 
-analyze_time: 60
-analyze_threhold: 0.03
+  move_from: 80
+  move_till: 85
 
-variations_threshold: 0.05
-move_list_threshold: 0.2  # This filters suggested move list by at least this probability
+  stop_on_winrate: 0.80
 
-variations_time: 30
-variations_depth: 3
+  analyze_time: 60
+  analyze_threhold: 0.03
 
-restarts: 0
-wipe_comments: False  # Store True if you want to wipe comments
+  variations_threshold: 0.05
+  move_list_threshold: 0.2  # This filters suggested move list by at least this probability
+
+  variations_time: 30
+  variations_depth: 3
+
+  restarts: 0
+  wipe_comments: False  # Store True if you want to wipe comments
 
 
-bot_settings:
+bots:
   leela:
     type: leela
     path_to_executable: ./bots/leela/leela_0110_linux_x64

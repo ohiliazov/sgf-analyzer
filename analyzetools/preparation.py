@@ -9,6 +9,21 @@ from sgflib import SGFParser
 comment_regex = r"(?P<nickname>[\w\W]+)+: (?P<node_comment>[\w\W]+)+"
 
 
+def parse_sgf(path_to_sgf):
+    """Return parsed Collection from sgf"""
+    with open(path_to_sgf, 'r', encoding="utf-8") as sgf_file:
+        data = "".join([line for line in sgf_file])
+    return SGFParser(data).parse()
+
+
+def make_checkpoint_dir(sgf, bot):
+    """Create unique checkpoint directory"""
+    base_hash = hashlib.md5(str(sgf).encode()).hexdigest()
+    base_dir = os.path.join(settings.CHECKPOINTS_DIR.format(bot), base_hash)
+    os.makedirs(base_dir, exist_ok=True)
+
+    return base_dir
+
 
 def get_initial_values(cursor):
     node_boardsize = cursor.node.get('SZ')
