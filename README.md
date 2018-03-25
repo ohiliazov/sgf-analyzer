@@ -3,7 +3,7 @@
 This script is a modified version of scripts originally from:
 https://github.com/lightvector/leela-analysis
 
-Currently, it's designed to work with **Leela 0.10.0**, no guarantees about compatibility with any past or future versions. 
+Currently, it's designed to work with **Leela** and **Leela Zero**, no guarantees about compatibility with any past or future versions. 
 It runs on Python 3.
 
 **WARNING:** It is not uncommon for Leela to mess up on tactical situations and give poor suggestions, particularly when it hasn't
@@ -12,54 +12,46 @@ notion than humans of how to wrap up a won game and what moves (despite still be
 many grains of salt.
 
 ### How to Use
-First, download and install the commandline/GTP engine version of Leela from:
+First, download and install the commandline/GTP engine version of Leela or Leela Zero from:
 
     https://sjeng.org/leela.html
+    http://zero.sjeng.org/
 
 Download or Clone this repository to a local directory:
 
-    git clone https://github.com/jumpman24/leela-analysis-36
-    cd leela-analysis-36
+    git clone https://github.com/jumpman24/sgf-analyzer
+    cd sgf-analyzer
 
 Then run the script to analyze a game, providing the command with arguments:
 * file name of game to analyze 
-* path to GTP version of Leela, such as ./Leela0100GTP.exe or ./leela_0100_linux_x64, etc.
-* other parameters are optional
-    
-      sgfanalyze.py my_game.sgf --leela /PATH/TO/LEELA.exe
+* used configuration (default is stored in config.yaml:bots:default) 
+   
+      sgfanalyze.py my_game.sgf --bot leela-zero
 
-Some of available options:
+Some of available options in config:
 
-    --analyze-time    - How many seconds to use per game moves analysis (default=30)
-    --variations-time - How many seconds to use per variations analysis (default=15)
-    --var-thresh      - Explore variations on moves losing at least this much of win rate (default=0.05)
-    --analyze-thresh  - Display analysis on moves losing at least this much of win rate (default=0.05)    
-    --nodes-per-var   - Number of nodes to explore (depth) in each variation tree (default=5)
-    --num_to_show     - Number of moves to show from suggested perfect variations (default=0)
-    --start           - Analyze game starting at this move (default=0)
-    --stop            - Analyze game stopping at this move (default=infinity)
-    --wipe-comments   - Remove existing comments from the main line of the SGF file
-    --no-graph        - Do not build nice pdf graph of win rate progress
-    --verbosity       - Set the verbosity level
+    stop_on_winrate: 0.80       # Stops analysis on this winrate drop(default=0.80)
+    analyze_time: 60            # How many seconds to use per game moves analysis (default=60)
+    analyze_threshold: 0.05     # Display analysis on moves losing at least this much of win rate (default=0.05)
+    variations_threshold: 0.10  # Explore variations on moves losing at least this much of win rate (default=0.05)
+    variations_time: 30         # How many seconds to use per variations analysis (default=30)
+    variations_depth: 5         # Number of nodes to explore (depth) in each variation tree (default=5)
+    num_to_show: 10             # Number of suggested perfect moves to show(default=10)
 
 By default, Leela will go through every position in the provided game and find what it considers to be all the mistakes by both players,
 producing an SGF file where it highlights those mistakes and provides alternative variations it would have expected. It will probably take
 an hour or two to run.
 
-Run the script with --help to see other options you can configure. You can change the amount of time Leela will analyze for, change how
-much effort it puts in to making variations versus just analyzing the main game, or select just a subrange of the game to analyze.
-___
-
 ### TODO list:
 
    - [x] clean-up suggested variations with low visits rate
-   - [ ] mark by A-B alternatives which has low difference
+   - [x] mark by A-B alternatives which has low difference
    - [ ] support Ray bot (in progress) 
    - [ ] code refactoring (in progress) 
    - [ ] add documentation (in progress) 
-   - [ ] show even branches
-   - [ ] add params to stop analysis if win rate drops > ~80%
-   - [ ] add logger
+   - [x] show even branches
+   - [x] add params to stop analysis if win rate drops > ~80%
+   - [x] add logger
    - [x] tune performance between leela calls
    - [x] support/clean-up non english characters (bug)
    - [x] update pdf graph output to have better look

@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import matplotlib.pyplot as plt
 import re
 
 SGF_COORD = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
@@ -55,48 +54,3 @@ def parse_position(board_size, pos):
         return f"{x}{y}"
     else:
         raise PointValueError(f'"{pos} is not a valid point for board size = {board_size}')
-
-
-def save_to_file(sgf_fn, content, bot):
-    path_to_save = f"_analyzed_{bot}".join(os.path.splitext(sgf_fn))
-    with open(path_to_save, mode='w', encoding='utf-8') as f:
-        f.write(str(content))
-
-
-def graph_winrates(winrates, sgf_fn, bot):
-    x = []
-    y = []
-    for move_num in sorted(winrates.keys()):
-        if 'winrate' not in winrates[move_num]:
-            continue
-        x.append(move_num)
-        y.append(winrates[move_num]['winrate'])
-
-    plt.figure()
-
-    # fill graph with horizontal coordinate lines, step 0.25
-    for xc in np.arange(0, 1, 0.025):
-        plt.axhline(xc, 0, max(winrates.keys()), linewidth=0.04, color='0.7')
-
-    # add single central horizontal line
-    plt.axhline(0.50, 0, max(winrates.keys()), linewidth=0.3, color='0.2')
-
-    # main graph of win rate changes
-    plt.plot(x, y, color='#ff0000', marker='.', markersize=2.5, linewidth=0.6)
-
-    # set range limits for x and y axes
-    plt.xlim(0, max(winrates.keys()))
-    plt.ylim(0, 1)
-
-    # set size of numbers on axes
-    plt.yticks(np.arange(0, 1.05, 0.05), fontsize=6)
-    plt.yticks(fontsize=6)
-
-    # add labels to axes
-    plt.xlabel("Move Number", fontsize=10)
-    plt.ylabel("Win Rate", fontsize=12)
-
-    # in this script for pdf it use the same file name as provided sgf file to avoid extra parameters
-    file_name = f"{os.path.splitext(sgf_fn)[0]}_{bot}.pdf"
-    plt.savefig(file_name, dpi=200, format='pdf', bbox_inches='tight')
-    plt.close()
