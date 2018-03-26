@@ -2,17 +2,18 @@ import argparse
 import hashlib
 import os
 import pickle
+import tkinter as tk
+from tkinter import filedialog
 
 import numpy as np
 from yaml import load
 
 import settings
-from log import logger, log_stream
 from bot_engines import LeelaCLI, LeelaZeroCLI
-from sgflib import SGFParser
+from log import logger, log_stream
+from sgflib import Node, Property, SGFParser
 from sgftools import annotations
 from sgftools.utils import convert_position
-from sgflib import Node, Property
 
 with open(settings.PATH_TO_CONFIG) as yaml_stream:
     yaml_data = load(yaml_stream)
@@ -43,8 +44,6 @@ def retry_analysis(restarts):
 
 def parse_cmd_line():
     parser = argparse.ArgumentParser(argument_default=None)
-
-    parser.add_argument("path_to_sgf", nargs='+', help="List of SGF-files to analyze.")
     parser.add_argument('-b', '--bot', default=BOTS['default'],
                         dest='bot', help="Settings from config.yaml to use.")
     parser.add_argument('--no-vars', dest='no_variations', action='store_true', help="Skip variations analysis.")
@@ -539,19 +538,13 @@ class BotAnalyzer:
 
 
 if __name__ == '__main__':
+    root = tk.Tk()
+    root.withdraw()
+
     cmd_args = parse_cmd_line()
+    games = filedialog.askopenfilenames()
 
-    games = []
-    for path in cmd_args.path_to_sgf:
-        if os.path.isdir(path):
-            for file in os.listdir(path):
-                path_to_file = os.path.join(path, file)
-                if os.path.splitext(path_to_file)[1] == '.sgf':
-                    games.append(path_to_file)
-        elif os.path.exists(path):
-            games.append(path)
-
-    logger.info('Found %s sgf-files to analyze.', len(games))
+    logger.info('%s games selected for analysis.', len(games))
 
     queue = []
     for game in games:
