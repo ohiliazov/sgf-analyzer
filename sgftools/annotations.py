@@ -86,8 +86,12 @@ def annotate_sgf(cursor, comment, LB_values, TR_values):
     else:
         c_node.add_property(Property('C', [comment]))
 
-    if len(LB_values) > 0:
+    if 'LB' in c_node:
+        c_node['LB'].extend(LB_values)
+    else:
         c_node.add_property(Property('LB', LB_values))
 
-    if len(TR_values) > 0:
+    if 'TR' in c_node:
+        c_node['TR'].extend(TR_values)
+    else:
         c_node.add_property(Property('TR', TR_values))
