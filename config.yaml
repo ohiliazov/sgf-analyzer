@@ -2,7 +2,7 @@
 # 20 INFO     - normal
 # 30 WARNING  - mistakes
 # 40 ERROR    - script errors
-log_level: 30
+log_level: 20
 
 config:
   wipe_comments: True  # Store True if you want to wipe comments
@@ -12,13 +12,13 @@ config:
 
   stop_on_winrate: 0.80       # Stops analysis on this winrate drop
 
-  analyze_time: 60            # How many seconds to use per game moves analysis (default=60)
-  analyze_threshold: 0.05     # Display analysis on moves losing at least this much of win rate (default=0.05)
+  analyze_time: 120            # How many seconds to use per game moves analysis (default=60)
+  analyze_threshold: 0.025     # Display analysis on moves losing at least this much of win rate (default=0.05)
 
-  variations_threshold: 0.10  # Explore variations on moves losing at least this much of win rate (default=0.05)
+  variations_threshold: 0.05   # Explore variations on moves losing at least this much of win rate (default=0.05)
 
-  variations_time: 30         # How many seconds to use per variations analysis (default=30)
-  variations_depth: 5         # Number of nodes to explore (depth) in each variation tree (default=5)
+  variations_time: 60         # How many seconds to use per variations analysis (default=30)
+  variations_depth: 3         # Number of nodes to explore (depth) in each variation tree (default=5)
   num_to_show: 10             # Number of suggested perfect moves to show(default=10)
 
   move_list_threshold: 0.2    # This filters suggested move list by at least this probability
@@ -34,13 +34,13 @@ bots:
 
   leela:
     bot_type: leela
-    executable: /home/ohili/Downloads/Leela0110GTP/leela_0110_linux_x64
+    executable: /home/gelya/PycharmProjects/sgf-analyzer/bots/Leela/leela_0110_linux_x64
     arguments: --gtp --noponder  # Always leave --gtp --noponder
 
   leela-opencl:
     bot_type: leela
-    executable: /home/ohili/Downloads/Leela0110GTP/leela_0110_linux_x64_opencl
-    arguments: --gtp --noponder
+    executable: /home/gelya/PycharmProjects/sgf-analyzer/bots/Leela/leela_0110_linux_x64_opencl
+    arguments: --gtp --noponder --nobook
 
   leela-zero:  # LeelaZero also requires weights
     bot_type: leela-zero

@@ -346,7 +346,9 @@ class BotAnalyzer:
                 self.save_to_file()
                 self.graph_winrates()
 
-                if 'winrate' in stats and 1 - CONFIG['stop_on_winrate'] > stats['winrate'] > CONFIG['stop_on_winrate']:
+                if 'winrate' in stats \
+                        and (1 - CONFIG['stop_on_winrate'] > stats['winrate']
+                             or stats['winrate'] > CONFIG['stop_on_winrate']):
                     break
 
                 moves_count += 1

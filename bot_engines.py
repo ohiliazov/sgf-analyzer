@@ -408,33 +408,6 @@ class LeelaCLI(BaseCLI):
 
 
 class LeelaZeroCLI(LeelaCLI):
-    """
-    Allowed options:
-      -h [ --help ]                 Show commandline options.
-      -g [ --gtp ]                  Enable GTP mode.
-      -t [ --threads ] arg (=2)     Number of threads to use.
-      -p [ --playouts ] arg         Weaken engine by limiting the number of
-                                    playouts.Requires --noponder.
-      -v [ --visits ] arg           Weaken engine by limiting the number of visits.
-      --timemanage arg (=auto)      [auto|on|off] Enable extra time management
-                                    features.
-                                    auto = off when using -m, otherwise on
-      -b [ --lagbuffer ] arg (=100) Safety margin for time usage in centiseconds.
-      -r [ --resignpct ] arg (=-1)  Resign when winrate is less than x%.
-                                    -1 uses 10% but scales for handicap.
-      -m [ --randomcnt ] arg (=0)   Play more randomly the first x moves.
-      -n [ --noise ]                Enable policy network randomization.
-      -s [ --seed ] arg             Random number generation seed.
-      -d [ --dumbpass ]             Don't use heuristics for smarter passing.
-      -w [ --weights ] arg          File with network weights.
-      -l [ --logfile ] arg          File to log input/output to.
-      -q [ --quiet ]                Disable all diagnostic output.
-      --noponder                    Disable thinking on opponent's time.
-      --gpu arg                     ID of the OpenCL device(s) to use (disables
-                                    autodetection).
-      --full-tuner                  Try harder to find an optimal OpenCL tuning.
-      --tune-only                   Tune OpenCL only and then exit.
-    """
     update_regex = r'Playouts: ([0-9]+), Win: ([0-9]+\.[0-9]+)\%, PV:(( [A-Z][0-9]+)+)'  # OK
     status_regex = r'NN eval=([0-9]+\.[0-9]+)'  # OK
     move_regex = r'\s*([A-Z][0-9]+) -> +([0-9]+) \(V: +([0-9]+\.[0-9]+)\%\) \(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'  # OK
