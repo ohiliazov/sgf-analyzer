@@ -34,12 +34,12 @@ bots:
 
   leela:
     bot_type: leela
-    executable: /home/gelya/PycharmProjects/sgf-analyzer/bots/Leela/leela_0110_linux_x64
+    executable: /home/ohili/Downloads/Leela0110GTP/leela_0110_linux_x64
     arguments: --gtp --noponder  # Always leave --gtp --noponder
 
   leela-opencl:
     bot_type: leela
-    executable: /home/gelya/PycharmProjects/sgf-analyzer/bots/Leela/leela_0110_linux_x64_opencl
+    executable: /home/ohili/Downloads/Leela0110GTP/leela_0110_linux_x64_opencl
     arguments: --gtp --noponder
 
   leela-zero:  # LeelaZero also requires weights

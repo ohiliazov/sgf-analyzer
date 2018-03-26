@@ -1,4 +1,4 @@
-from sgftools.utils import convert_position, parse_position
+from utils import convert_position, parse_position
 
 
 def test_convert_position_valid():

@@ -1,5 +1,5 @@
 from sgflib import Property
-from sgftools.utils import convert_position, is_pass
+from utils import convert_position, is_pass
 
 
 def format_winrate(stats, move_list, board_size, next_game_move):

@@ -7,7 +7,7 @@ import re
 from readerthread import start_reader_thread
 
 from log import logger
-from sgftools.utils import convert_position, parse_position
+from utils import convert_position, parse_position
 
 
 def str_to_percent(value: str):
@@ -226,7 +226,7 @@ class BaseCLI:
         # Drain and parse Leela stdout & stderr
         stats, move_list = self.parse_analysis(stdout, stderr)
 
-        if move_list:
+        if stats.get('winrate') and move_list:
             best_move = convert_position(self.board_size, move_list[0]['pos'])
             winrate = (stats['winrate'] * 100)
             visits = stats['visits']

@@ -1,6 +1,3 @@
-import os
-
-import numpy as np
 import re
 
 SGF_COORD = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',

@@ -9,10 +9,9 @@ from yaml import load
 import settings
 from log import logger, log_stream
 from bot_engines import LeelaCLI, LeelaZeroCLI
-from sgflib import SGFParser
-from sgftools import annotations
-from sgftools.utils import convert_position
-from sgflib import Node, Property
+from sgflib import SGFParser, Node, Property
+import annotations
+from utils import convert_position
 
 with open(settings.PATH_TO_CONFIG) as yaml_stream:
     yaml_data = load(yaml_stream)
