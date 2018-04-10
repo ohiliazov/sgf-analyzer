@@ -531,6 +531,8 @@ class BotAnalyzer:
             self.prepare()
             self.analyze_main_line()
             self.analyze_variations()
+        except KeyboardInterrupt:
+            pass
         except:
             logger.exception("Exception during analysis.")
         finally:

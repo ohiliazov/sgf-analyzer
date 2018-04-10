@@ -411,7 +411,6 @@ class LeelaZeroCLI(LeelaCLI):
     update_regex = r'Playouts: ([0-9]+), Win: ([0-9]+\.[0-9]+)\%, PV:(( [A-Z][0-9]+)+)'  # OK
     status_regex = r'NN eval=([0-9]+\.[0-9]+)'  # OK
     move_regex = r'\s*([A-Z][0-9]+) -> +([0-9]+) \(V: +([0-9]+\.[0-9]+)\%\) \(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'  # OK
-    # best_regex = r'([0-9]+) visits, score (\-? ?[0-9]+\.[0-9]+)\% \(from \-? ?[0-9]+\.[0-9]+\%\) PV: (.*)'  # OK
     stats_regex = r'([0-9]+) visits, ([0-9]+) nodes(?:, ([0-9]+) playouts)(?:, ([0-9]+) n/s)'  # OK
     finished_regex = r'= ([A-Z][0-9]+|resign|pass)'  # OK
 
@@ -431,6 +430,8 @@ class LeelaZeroCLI(LeelaCLI):
             stats = self.parse_status(stats, None, line)
 
         stats['best'] = move_list[0]['pos']
+        stats['winrate'] = move_list[0]['winrate']
+
         stats = self.parse_finished(stats, stdout)
 
         required_keys = ['best', 'winrate', 'visits']
@@ -472,14 +473,6 @@ class LeelaZeroCLI(LeelaCLI):
             }
             move_list.append(info)
         return move_list
-
-    def parse_best(self, stats, line):
-        m = re.match(self.best_regex, line)
-        if m is not None:
-            print(m.groups())
-            stats['best'] = parse_position(self.board_size, m.group(3).split()[0])
-            stats['winrate'] = self.flip_winrate(str_to_percent(m.group(2)))
-        return stats
 
     def parse_status(self, stats, summarized, line):
         m = re.match(self.stats_regex, line)
