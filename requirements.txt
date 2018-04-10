@@ -1,3 +1,13 @@
-pytest
-numpy
+attrs
+cycler
 matplotlib
+numpy
+pluggy
+py
+pyparsing
+pytest
+python-dateutil
+pytz
+PyYAML
+six
+wget
