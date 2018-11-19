@@ -97,6 +97,8 @@ class Property(UserList):
         super().__init__(initlist=self.data)
 
     def __str__(self):
+        if not self.data or self.data == ['']:
+            return ""
         return f"{self.label}[{']['.join([_escape_text(x) for x in self])}]"
 
 
