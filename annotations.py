@@ -81,17 +81,21 @@ def format_analysis(stats, move_list, this_move, board_size):
 
 def annotate_sgf(cursor, comment, LB_values, TR_values):
     c_node = cursor.node
-    if 'C' in c_node:
-        c_node['C'].data[0] += comment
-    else:
-        c_node.add_property(Property('C', [comment]))
 
-    if 'LB' in c_node:
-        c_node['LB'].extend(LB_values)
-    else:
-        c_node.add_property(Property('LB', LB_values))
+    if comment:
+        if 'C' in c_node:
+            c_node['C'].data[0] += comment
+        else:
+            c_node.add_property(Property('C', [comment]))
 
-    if 'TR' in c_node:
-        c_node['TR'].extend(TR_values)
-    else:
-        c_node.add_property(Property('TR', TR_values))
+    if LB_values:
+        if 'LB' in c_node:
+            c_node['LB'].extend(LB_values)
+        else:
+            c_node.add_property(Property('LB', LB_values))
+
+    if TR_values:
+        if 'TR' in c_node:
+            c_node['TR'].extend(TR_values)
+        else:
+            c_node.add_property(Property('TR', TR_values))
