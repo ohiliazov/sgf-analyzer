@@ -93,12 +93,16 @@ class Property(UserList):
 
     def __init__(self, label: str, data: list):
         self.label = label
-        self.data = data or ['']
+        self.data = data or []
         super().__init__(initlist=self.data)
 
+        while '' in self.data:
+            self.data.remove('')
+
     def __str__(self):
-        if not self.data or self.data == ['']:
+        if not self.data:
             return ""
+
         return f"{self.label}[{']['.join([_escape_text(x) for x in self])}]"
 
 
@@ -115,6 +119,7 @@ class Node(OrderedDict):
 
         for prop in pr_list:  # type: Property
             self.add_property(prop)
+
         super().__init__()
 
     def __str__(self):
@@ -122,7 +127,8 @@ class Node(OrderedDict):
         return f";{''.join([str(self[x]) for x in self])}"
 
     def add_property(self, prop: Property):
-        return self.setdefault(prop.label, prop)
+        if prop.data:
+            return self.setdefault(prop.label, prop)
 
 
 class GameTree(UserList):
