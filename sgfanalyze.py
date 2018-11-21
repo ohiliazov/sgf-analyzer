@@ -6,11 +6,11 @@ import pickle
 import numpy as np
 from yaml import load
 
-import settings
-from log import logger, log_stream
-from bot_engines import LeelaCLI, LeelaZeroCLI
-from sgflib import SGFParser, Node, Property
 import annotations
+import settings
+from bot_engines import LeelaCLI, LeelaZeroCLI
+from log import logger, log_stream
+from sgflib import SGFParser, Node, Property
 from utils import convert_position
 
 with open(settings.PATH_TO_CONFIG) as yaml_stream:
@@ -531,8 +531,10 @@ class BotAnalyzer:
             self.prepare()
             self.analyze_main_line()
             self.analyze_variations()
+
         except KeyboardInterrupt:
             pass
+
         except:
             logger.exception("Exception during analysis.")
         finally:
@@ -541,11 +543,9 @@ class BotAnalyzer:
         logger.info("Finished analyzing file: %s", os.path.basename(self._path_to_sgf))
 
 
-if __name__ == '__main__':
-    cmd_args = parse_cmd_line()
-
+def process_path(path_string):
     games = []
-    for path in cmd_args.path_to_sgf:
+    for path in path_string:
         if os.path.isdir(path):
             for file in os.listdir(path):
                 path_to_file = os.path.join(path, file)
@@ -554,13 +554,21 @@ if __name__ == '__main__':
         elif os.path.exists(path):
             games.append(path)
 
-    logger.info('Found %s sgf-files to analyze.', len(games))
+    return games
+
+
+if __name__ == '__main__':
+    cmd_args = parse_cmd_line()
+
+    game_list = process_path(cmd_args.path_to_sgf)
+
+    logger.info('Found %s sgf-files to analyze.', len(game_list))
 
     queue = []
-    for game in games:
+    for game in game_list:
         queue.append(BotAnalyzer(game, cmd_args.bot))
 
     for game in queue:
         game.run()
 
-    logger.info('Analysis done for %s sgf-files.', len(games))
+    logger.info('Analysis done for %s sgf-files.', len(game_list))
