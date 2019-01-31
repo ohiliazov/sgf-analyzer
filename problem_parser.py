@@ -58,7 +58,8 @@ def to_color_array(stones: list, board_size: int = 19):
     return black, white
 
 
-def make_sgf(black: list = None, white: list = None, lm: str = None, va: list = None, current: str = 'B'):
+def make_sgf(black: list = None, white: list = None, lm: str = None, va: list = None, current: str = 'B',
+             wr: list = None):
     res = '(;'
 
     if black:
@@ -76,6 +77,9 @@ def make_sgf(black: list = None, white: list = None, lm: str = None, va: list = 
     if lm:
         res += f'\nTR[{lm}]'
 
+    if wr:
+        res += f'C[Best: {wr[0]}%\n' \
+                 f'Real: {wr[1]}%]'
     for v in va:
         pl = current
         res += '\n('
@@ -116,9 +120,10 @@ if __name__ == '__main__':
         lm = p['lm']
         va = p['va']
         cl = p['cl']
+        wr = p['wr']
         b, w = to_color_array(to_stone_array(to_number_array(p['st']), sz))
 
-        sgf = make_sgf(b, w, lm, va, cl)
+        sgf = make_sgf(b, w, lm, va, cl, wr)
 
         with open(p["id"] + '.sgf', 'w+') as f:
             f.write(sgf)
