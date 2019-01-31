@@ -78,8 +78,8 @@ def make_sgf(black: list = None, white: list = None, lm: str = None, va: list = 
         res += f'\nTR[{lm}]'
 
     if wr:
-        res += f'C[Best: {wr[0]}%\n' \
-                 f'Real: {wr[1]}%]'
+        res += f'C[Best play: {wr[0]}%\n' \
+                 f'Real play: {wr[1]}%]'
     for v in va:
         pl = current
         res += '\n('
