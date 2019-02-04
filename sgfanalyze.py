@@ -415,6 +415,7 @@ class BotAnalyzer:
 
             expand(node, stats, filter_move_list(move_list))
             self.bot.pop_move_from_history(len(node['history']))
+            self.save_to_file()
 
         expand(tree, stats, move_list)
 

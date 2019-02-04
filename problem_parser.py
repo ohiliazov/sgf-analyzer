@@ -58,7 +58,11 @@ def to_color_array(stones: list, board_size: int = 19):
     return black, white
 
 
-def make_sgf(black: list = None, white: list = None, lm: str = None, va: list = None, current: str = 'B',
+def make_sgf(black: list = None,
+             white: list = None,
+             lm: str = None,
+             va: list = None,
+             current: str = 'B',
              wr: list = None):
     res = '(;'
 
@@ -78,20 +82,30 @@ def make_sgf(black: list = None, white: list = None, lm: str = None, va: list = 
         res += f'\nTR[{lm}]'
 
     if wr:
-        res += f'C[Best play: {wr[0]}%\n' \
-                 f'Real play: {wr[1]}%]'
-    for v in va:
+        res += f'C[{"Black" if current == "B" else "White"} to play.\n' \
+            f'Best play: {wr[0]}%\n' \
+            f'Real game: {wr[1]}%]'
+
+    def add_variation(v: str, comment: str = None):
+        r = '\n('
         pl = current
-        res += '\n('
 
         for i in range(0, len(v), 2):
             mv = v[i:i + 2]
-            res += f';{pl}[{mv}]'
+            r += f';{pl}[{mv}]'
 
             pl = 'W' if pl == 'B' else 'B'
 
-        res += ')'
+        if comment and wr:
+            r += f"C[{comment}]"
+
+        r += ')'
+        return r
+
+    res += add_variation(va[0], f"Best play: {wr[0]}%")
+    res += add_variation(va[0], f"Real game: {wr[1]}%")
     res += '\n)'
+
     return res
 
 
@@ -104,7 +118,7 @@ def parse_html(text: str):
 
 
 if __name__ == '__main__':
-    if len(sys.argv[1]) < 2:
+    if len(sys.argv) < 2:
         exit('Please provide path to file.')
 
     if not os.path.exists(sys.argv[1]):
