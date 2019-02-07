@@ -103,7 +103,7 @@ def make_sgf(black: list = None,
         return r
 
     res += add_variation(va[0], f"Best play: {wr[0]}%")
-    res += add_variation(va[0], f"Real game: {wr[1]}%")
+    res += add_variation(va[1], f"Real game: {wr[1]}%")
     res += '\n)'
 
     return res
