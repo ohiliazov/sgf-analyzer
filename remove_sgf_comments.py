@@ -36,4 +36,4 @@ if __name__ == '__main__':
         count += 1
         
         if count % 1000:
-            print(f"Files processed: {count/len(game_list)*100}%")
+            print(f"Files processed: {count}")
