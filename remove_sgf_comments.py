@@ -15,8 +15,13 @@ if __name__ == '__main__':
     else:
         games = [sys.argv[1],]
     
+    count = 0
+    length = len(games)
     for game in games:
         with open(game, 'r') as f:
             sgf = f.read()
         with open(game, 'w') as f:
             f.write(remove_comments(sgf))
+        count += 1
+        if count % 1000 == 0:
+            print(f"Files processed: {int(count / length * 100)}%")
