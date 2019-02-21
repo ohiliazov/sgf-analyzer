@@ -20,7 +20,7 @@ if __name__ == '__main__':
     count = 0
     for game in game_list:
         with open(game, 'r') as f:
-            sgf = SGFParser(f.read()).parse().cursor().game_tree.mainline().cursor()
+            sgf = SGFParser(f.read()).parse().cursor()
             new_sgf = GameTree()
             while not sgf.atEnd:
                 new_node = Node()
