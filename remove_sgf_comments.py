@@ -1,27 +1,33 @@
-import re
-import os
+from sgflib import SGFParser, Node, GameTree
 import sys
-
-
-def remove_comments(text):
-    return re.sub("C\[[\w\W]*(?<!\\\\)]", '', text)
-
+import os
 
 if __name__ == '__main__':
-    games = []
-    if os.path.isdir(sys.argv[1]):
-        for p in os.listdir(sys.argv[1]):
-            games.append(os.path.join(sys.argv[1], p))
+    game_list = []
+
+    path = sys.argv[1]
+
+    os.makedirs('cleaned_sgfs', exist_ok=True)
+
+    if os.path.isdir(path):
+        os.makedirs(os.path.join('cleaned_sgfs', path), exist_ok=True)
+        for s in os.listdir(path):
+            if os.path.splitext(s)[1] == '.sgf':
+                game_list.append(os.path.join(path, s))
     else:
-        games = [sys.argv[1],]
-    
-    count = 0
-    length = len(games)
-    for game in games:
+        game_list.append(path)
+
+    for game in game_list:
         with open(game, 'r') as f:
-            sgf = f.read()
-        with open(game, 'w') as f:
-            f.write(remove_comments(sgf))
-        count += 1
-        if count % 1000 == 0:
-            print(f"Files processed: {int(count / length * 100)}%")
+            sgf = SGFParser(f.read()).parse().cursor().game_tree.mainline().cursor()
+            new_sgf = GameTree()
+            while not sgf.atEnd:
+                new_node = Node()
+                for prop in sgf.node:
+                    if sgf.node[prop].label != 'C':
+                        new_node.add_property(sgf.node[prop])
+
+                new_sgf.append_node(new_node)
+                sgf.next()
+        with open(os.path.join('cleaned_sgfs', game), 'w') as f:
+            f.write(str(new_sgf))
