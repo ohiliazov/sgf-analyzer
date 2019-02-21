@@ -17,6 +17,7 @@ if __name__ == '__main__':
     else:
         game_list.append(path)
 
+    count = 0
     for game in game_list:
         with open(game, 'r') as f:
             sgf = SGFParser(f.read()).parse().cursor().game_tree.mainline().cursor()
@@ -31,3 +32,8 @@ if __name__ == '__main__':
                 sgf.next()
         with open(os.path.join('cleaned_sgfs', game), 'w') as f:
             f.write(str(new_sgf))
+        
+        count += 1
+        
+        if count % 1000:
+            print(f"Files processed: {count/len(game_list)*100}%")
