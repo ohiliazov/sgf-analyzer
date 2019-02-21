@@ -11,7 +11,7 @@ if __name__ == '__main__':
     games = []
     if os.path.isdir(sys.argv[1]):
         for p in os.listdir(sys.argv[1]):
-            games.appens(os.join(sys.argv[1], p))
+            games.append(os.join(sys.argv[1], p))
     else:
         games = [sys.argv[1],]
     
