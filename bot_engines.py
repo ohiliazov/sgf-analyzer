@@ -410,7 +410,7 @@ class LeelaCLI(BaseCLI):
 class LeelaZeroCLI(LeelaCLI):
     update_regex = r'Playouts: ([0-9]+), Win: ([0-9]+\.[0-9]+)\%, PV:(( [A-Z][0-9]+)+)'  # OK
     status_regex = r'NN eval=([0-9]+\.[0-9]+)'  # OK
-    move_regex = r'\s*([A-Z][0-9]+) -> +([0-9]+) \(V: +([0-9]+\.[0-9]+)\%\) \(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'  # OK
+    move_regex = r'\s*([A-Z][0-9]+) -> +([0-9]+) \(V: +([0-9]+\.[0-9]+)\%\) .*\(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'  # OK
     stats_regex = r'([0-9]+) visits, ([0-9]+) nodes(?:, ([0-9]+) playouts)(?:, ([0-9]+) n/s)'  # OK
     finished_regex = r'= ([A-Z][0-9]+|resign|pass)'  # OK
 
