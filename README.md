@@ -1,5 +1,7 @@
 ## Leela Analysis Script
 
+***Warning*** Leela support will be deprecated. Only LeelaZero will be supported soon.
+
 This script is a modified version of scripts originally from:
 https://github.com/lightvector/leela-analysis
 
