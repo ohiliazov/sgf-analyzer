@@ -1,12 +1,10 @@
 import hashlib
+import re
 from subprocess import Popen, PIPE
 from time import sleep
 
-import re
-
-from readerthread import start_reader_thread
-
 from log import logger
+from readerthread import start_reader_thread
 from utils import convert_position, parse_position
 
 
@@ -21,7 +19,8 @@ class CLIException(Exception):
 class BaseCLI:
     """ Command Line Interface designed to work with GTP protocol."""
 
-    def __init__(self, bot_type, executable, arguments, board_size=19, komi=6.5, handicap=0, time_per_move=60):
+    def __init__(self, bot_type, executable, arguments,
+                 board_size=19, komi=6.5, handicap=0, time_per_move=60):
         self._history = []
 
         self.process = None
@@ -47,7 +46,7 @@ class BaseCLI:
         return history_hash.hexdigest()
 
     def add_move_to_history(self, color: str, pos: str):
-        """ Convert given SGF coordinates to board coordinates and writes them to history as a command to GTP console"""
+        """ Convert given SGF coordinates to GTP console command"""
         move = convert_position(self.board_size, pos)
         command = f"play {color} {move}"
         self._history.append(command)
@@ -110,7 +109,10 @@ class BaseCLI:
     def start(self):
         logger.info("Starting GTP...")
 
-        self.process = Popen([self.executable] + self.arguments, stdout=PIPE, stdin=PIPE, stderr=PIPE,
+        self.process = Popen([self.executable] + self.arguments,
+                             stdout=PIPE,
+                             stdin=PIPE,
+                             stderr=PIPE,
                              universal_newlines=True)
         sleep(2)
         self.stdout_thread = start_reader_thread(self.process.stdout)
@@ -252,12 +254,22 @@ class LeelaCLI(BaseCLI):
                    r'score=([BW]\+[0-9]+\.[0-9]+)'
     status_regex_no_vn = r'MC winrate=([0-9]+\.[0-9]+), ' \
                          r'score=([BW]\+[0-9]+\.[0-9]+)'
-    move_regex = r'^([A-Z][0-9]+) -> +([0-9]+) \(W: +(\-?[0-9]+\.[0-9]+)\%\) \(U: +(\-?[0-9]+\.[0-9]+)\%\) ' \
-                 r'\(V: +([0-9]+\.[0-9]+)\%: +([0-9]+)\) \(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'
-    move_regex_no_vn = r'^([A-Z][0-9]+) -> +([0-9]+) \(U: +(\-?[0-9]+\.[0-9]+)\%\) ' \
-                       r'\(R: +([0-9]+\.[0-9]+)\%: +([0-9]+)\) \(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'
-    best_regex = r'([0-9]+) visits, score (\-? ?[0-9]+\.[0-9]+)\% \(from \-? ?[0-9]+\.[0-9]+\%\) PV: (.*)'
-    stats_regex = r'([0-9]+) visits, ([0-9]+) nodes(?:, ([0-9]+) playouts)(?:, ([0-9]+) p/s)'
+    move_regex = r'^([A-Z][0-9]+) -> +([0-9]+) ' \
+                 r'\(W: +(\-?[0-9]+\.[0-9]+)\%\) ' \
+                 r'\(U: +(\-?[0-9]+\.[0-9]+)\%\) ' \
+                 r'\(V: +([0-9]+\.[0-9]+)\%: +([0-9]+)\) ' \
+                 r'\(N: +([0-9]+\.[0-9]+)\%\) ' \
+                 r'PV: (.*)$'
+    move_regex_no_vn = r'^([A-Z][0-9]+) -> +([0-9]+) ' \
+                       r'\(U: +(\-?[0-9]+\.[0-9]+)\%\) ' \
+                       r'\(R: +([0-9]+\.[0-9]+)\%: +([0-9]+)\) ' \
+                       r'\(N: +([0-9]+\.[0-9]+)\%\) ' \
+                       r'PV: (.*)$'
+    best_regex = r'([0-9]+) visits, ' \
+                 r'score (\-? ?[0-9]+\.[0-9]+)\% \(from \-? ?[0-9]+\.[0-9]+\%\) ' \
+                 r'PV: (.*)'
+    stats_regex = r'([0-9]+) visits, ' \
+                  r'([0-9]+) nodes(?:, ([0-9]+) playouts)(?:, ([0-9]+) p/s)'
     bookmove_regex = r'([0-9]+) book moves, ([0-9]+) total positions'
     finished_regex = r'= ([A-Z][0-9]+|resign|pass)'
 
@@ -302,7 +314,8 @@ class LeelaCLI(BaseCLI):
 
         if 'best' in stats:
             move_list = sorted(move_list,
-                               key=(lambda move: 1000000000000000 if move['pos'] == stats['best'] else move['visits']),
+                               key=(lambda move: 1000000000000000 if move['pos'] == stats[
+                                   'best'] else move['visits']),
                                reverse=True)
 
         return stats, move_list
@@ -314,7 +327,8 @@ class LeelaCLI(BaseCLI):
             visits = int(m.group(1))
             winrate = self.flip_winrate(str_to_percent(m.group(2)))
             pv = ' '.join([str(move) for move in m.group(3).split()])
-            logger.debug("Visited %s positions, black winrate %.2f%%, PV: %s", visits, winrate * 100, pv)
+            logger.debug("Visited %s positions, black winrate %.2f%%, PV: %s", visits,
+                         winrate * 100, pv)
 
     def parse_bookmove(self, stats, line):
         m = re.match(self.bookmove_regex, line)
@@ -403,15 +417,20 @@ class LeelaCLI(BaseCLI):
     def parse_finished(self, stats, stdout):
         m = re.search(self.finished_regex, "".join(stdout))
         if m is not None:
-            stats['chosen'] = "resign" if m.group(1) == "resign" else parse_position(self.board_size, m.group(1))
+            stats['chosen'] = "resign" if m.group(1) == "resign" else parse_position(
+                self.board_size, m.group(1))
         return stats
 
 
 class LeelaZeroCLI(LeelaCLI):
     update_regex = r'Playouts: ([0-9]+), Win: ([0-9]+\.[0-9]+)\%, PV:(( [A-Z][0-9]+)+)'  # OK
     status_regex = r'NN eval=([0-9]+\.[0-9]+)'  # OK
-    move_regex = r'\s*([A-Z][0-9]+) -> +([0-9]+) \(V: +([0-9]+\.[0-9]+)\%\) .*\(N: +([0-9]+\.[0-9]+)\%\) PV: (.*)$'  # OK
-    stats_regex = r'([0-9]+) visits, ([0-9]+) nodes(?:, ([0-9]+) playouts)(?:, ([0-9]+) n/s)'  # OK
+    move_regex = r'\s*([A-Z][0-9]+) -> +([0-9]+) ' \
+                 r'\(V: +([0-9]+\.[0-9]+)\%\) .*' \
+                 r'\(N: +([0-9]+\.[0-9]+)\%\) ' \
+                 r'PV: (.*)$'  # OK
+    stats_regex = r'([0-9]+) visits, ' \
+                  r'([0-9]+) nodes(?:, ([0-9]+) playouts)(?:, ([0-9]+) n/s)'  # OK
     finished_regex = r'= ([A-Z][0-9]+|resign|pass)'  # OK
 
     def parse_analysis(self, stdout, stderr):
@@ -479,4 +498,3 @@ class LeelaZeroCLI(LeelaCLI):
         if m is not None:
             stats['visits'] = int(m.group(1))
         return stats
-

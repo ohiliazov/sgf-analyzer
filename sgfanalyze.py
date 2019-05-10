@@ -444,22 +444,23 @@ class BotAnalyzer:
         def record(node):
             if not node["is_root"]:
                 annotations.annotate_sgf(self.cursor,
-                                         annotations.format_winrate(node["stats"], node["move_list"],
+                                         annotations.format_winrate(node["stats"],
+                                                                    node["move_list"],
                                                                     self.board_size, None),
                                          [], [])
                 move_list_to_display = []
 
-                # Only display info for the principal variation or for lines that have been explored.
+                # Only display info for the principal variation or for lines that have been explored
                 for i in range(len(node["children"])):
                     child = node["children"][i]
 
                     if child is not None and (i == 0 or child["explored"]):
                         move_list_to_display.append(node["move_list"][i])
 
-                (analysis_comment, lb_values, tr_values) = annotations.format_analysis(node["stats"],
-                                                                                       move_list_to_display,
-                                                                                       None, self.board_size)
-                annotations.annotate_sgf(self.cursor, analysis_comment, lb_values, tr_values)
+                (comment, lb_values, tr_values) = annotations.format_analysis(
+                    node["stats"], move_list_to_display, None, self.board_size)
+
+                annotations.annotate_sgf(self.cursor, comment, lb_values, tr_values)
 
             for i in range(len(node["children"])):
                 child = node["children"][i]
@@ -500,6 +501,7 @@ class BotAnalyzer:
         logger.info("Exploring variations for %d moves with %d depth.",
                     len(self.moves_to_variations),
                     CONFIG['variations_depth'])
+
         moves_count = 0
         while not self.cursor.atEnd:
             self.cursor.next()
