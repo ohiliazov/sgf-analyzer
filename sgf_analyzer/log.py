@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 
-from settings import LOGS_DIR
+from .settings import LOGS_DIR
 
 fmt = logging.Formatter('%(asctime)-15s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger('logs')

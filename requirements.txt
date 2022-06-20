@@ -1,13 +1,1 @@
-attrs
-cycler
-matplotlib
-numpy
-pluggy
-py
-pyparsing
-pytest
-python-dateutil
-pytz
-PyYAML
-six
-wget
+attrs cycler matplotlib numpy pluggy py pyparsing pytest python-dateutil pytz PyYAML six wget

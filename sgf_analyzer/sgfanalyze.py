@@ -3,18 +3,17 @@ import hashlib
 import os
 import pickle
 
-import numpy as np
-from yaml import load
+from yaml import safe_load
 
-import annotations
-import settings
-from bot_engines import LeelaCLI, LeelaZeroCLI
-from log import logger, log_stream
-from sgflib import SGFParser, Node, Property
-from utils import convert_position
+import sgf_analyzer.annotations as annotations
+import sgf_analyzer.settings as settings
+from .bot_engines import LeelaCLI
+from .log import logger, log_stream
+from .sgflib import SGFParser, Node, Property
+from .utils import convert_position
 
 with open(settings.PATH_TO_CONFIG) as yaml_stream:
-    yaml_data = load(yaml_stream)
+    yaml_data = safe_load(yaml_stream)
 
 CONFIG = yaml_data['config']
 BOTS = yaml_data['bots']
@@ -86,11 +85,7 @@ class BotAnalyzer:
         bot_settings = BOTS[self._bot_config]
         kwargs.update(bot_settings)
 
-        if bot_settings['bot_type'] == 'leela':
-            return LeelaCLI(**kwargs)
-
-        elif bot_settings['bot_type'] == 'leela-zero':
-            return LeelaZeroCLI(**kwargs)
+        return LeelaCLI(**kwargs)
 
     @property
     def board_size(self):
@@ -148,55 +143,6 @@ class BotAnalyzer:
         with open(path_to_save, mode='w', encoding='utf-8') as f:
             f.write(str(self.sgf_data))
 
-    def graph_winrates(self):
-        import matplotlib
-        matplotlib.use('Agg')
-
-        import matplotlib.pyplot as plt
-
-        if len(self.all_stats) <= 2:
-            return
-
-        first_move_num = min(self.all_stats.keys())
-        last_move_num = max(self.all_stats.keys())
-        x = []
-        y = []
-        for move_num in sorted(self.all_stats.keys()):
-            if 'winrate' not in self.all_stats[move_num]:
-                continue
-            x.append(move_num)
-            y.append(self.all_stats[move_num]['winrate'])
-
-        plt.figure()
-
-        # fill graph with horizontal coordinate lines, step 0.25
-        for xc in np.arange(0, 1, 0.025):
-            plt.axhline(xc, first_move_num, last_move_num, linewidth=0.04, color='0.7')
-
-        # add single central horizontal line
-        plt.axhline(0.50, first_move_num, last_move_num, linewidth=0.3, color='0.2')
-
-        # main graph of win rate changes
-        plt.plot(x, y, color='#ff0000', marker='.', markersize=2.5, linewidth=0.6)
-
-        # set range limits for x and y axes
-        plt.xlim(0, last_move_num)
-        plt.ylim(0, 1)
-
-        # set size of numbers on axes
-        plt.yticks(np.arange(0, 1.05, 0.05), fontsize=6)
-        plt.yticks(fontsize=6)
-
-        # add labels to axes
-        plt.xlabel("Move Number", fontsize=10)
-        plt.ylabel("Win Rate", fontsize=12)
-
-        # in this script for pdf it use the same file name as provided sgf file to avoid extra parameters
-        file_name = os.path.splitext(self._path_to_sgf)[0]
-        file_name = f"{file_name}_{self._bot_config}.pdf"
-        plt.savefig(file_name, dpi=200, format='pdf', bbox_inches='tight')
-        plt.close()
-
     def add_moves_to_bot(self):
         this_move = None
 
@@ -252,7 +198,7 @@ class BotAnalyzer:
     def prepare(self):
         """ Stores moves to analyze and wipes comments if needed"""
         base_hash = hashlib.md5(str(self.sgf_data).encode()).hexdigest()
-        self.base_dir = os.path.join(settings.CHECKPOINTS_DIR.format(self._bot_config), base_hash)
+        self.base_dir = settings.CHECKPOINTS_DIR / self._bot_config / base_hash
         os.makedirs(self.base_dir, exist_ok=True)
 
         move_num = -1
@@ -278,11 +224,11 @@ class BotAnalyzer:
         has_prev = False
         previous_player = None
 
-        logger.info(f"Executing analysis for %d moves", len(self.moves_to_analyze))
+        logger.info(f"Executing analysis for {len(self.moves_to_analyze)} moves")
         moves_count = 0
         self.cursor.reset()
         self.bot = self.factory()
-        self.bot.time_per_move = CONFIG['analyze_time']
+        self.bot.time_per_move = CONFIG["analyze_time"]
         self.bot.start()
         # analyze main line, without variations
         while not self.cursor.atEnd:
@@ -320,7 +266,7 @@ class BotAnalyzer:
                 if has_prev and delta <= -CONFIG['variations_threshold']:
                     self.moves_to_variations[move_num - 1] = True
 
-                if -delta > CONFIG['analyze_threshold']:
+                if -delta > CONFIG["analyze_threshold"]:
                     logger.warning("Move %d: %s %s is a mistake (winrate dropped by %.2f%%)", move_num + 1,
                                    previous_player, convert_position(self.board_size, this_move), -delta * 100)
 
@@ -344,7 +290,6 @@ class BotAnalyzer:
                 has_prev = True
 
                 self.save_to_file()
-                self.graph_winrates()
 
                 if 'winrate' in stats \
                         and (1 - CONFIG['stop_on_winrate'] > stats['winrate']

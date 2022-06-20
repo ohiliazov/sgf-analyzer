@@ -14,8 +14,8 @@ class PointValueError(Exception):
     pass
 
 
-def is_pass(board_size, pos):
-    return True if pos in ["", "pass"] or (pos == "tt" and board_size <= 19) else False
+def is_pass(board_size, pos) -> bool:
+    return bool(pos in ["", "pass"] or (pos == "tt" and board_size <= 19))
 
 
 def convert_position(board_size, coord):
